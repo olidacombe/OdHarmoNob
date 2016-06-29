@@ -18,6 +18,25 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 
+class PfftWindow
+{
+public:
+    PfftWindow(const int winSize);
+    ~PfftWindow();
+    const int getSize() { return size; }
+    const float operator[](const int index) { return windowData[index]; }
+protected:
+    int size;
+    float *windowData;
+};
+
+class LinearWindow : public PfftWindow
+{
+public:
+    LinearWindow(const int winSize);
+    //~LinearWindow();
+};
+
 class Pfft
 {
 public:
@@ -30,9 +49,11 @@ protected:
     
 private:
     ScopedPointer<FFT> fft;
+    ScopedPointer<LinearWindow> window;
     int fftSize;
     int overlapFactor;
 };
+
 
 
 #endif  // PFFT_H_INCLUDED
