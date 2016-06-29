@@ -15,10 +15,18 @@
 //==============================================================================
 OdHarmoNobAudioProcessor::OdHarmoNobAudioProcessor()
 {
+    for(int i=0; i<numFFTs; i++)
+    {
+        FFTs[i]=new FFT(fftSize, false);
+    }
 }
 
 OdHarmoNobAudioProcessor::~OdHarmoNobAudioProcessor()
 {
+    for(int i=0; i<numFFTs; i++)
+    {
+        FFTs[i]=nullptr;
+    }
 }
 
 //==============================================================================

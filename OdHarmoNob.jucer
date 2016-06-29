@@ -11,6 +11,8 @@
               pluginAAXCategory="AAX_ePlugInCategory_Dynamics" jucerVersion="4.2.1">
   <MAINGROUP id="ZkIrku" name="OdHarmoNob">
     <GROUP id="{68FFCE1D-B100-93C1-218C-78DFE0C8CD74}" name="Source">
+      <FILE id="lgQ7WJ" name="Pfft.cpp" compile="1" resource="0" file="Source/Pfft.cpp"/>
+      <FILE id="oY5dza" name="Pfft.h" compile="0" resource="0" file="Source/Pfft.h"/>
       <FILE id="oVgcu0" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="SMhihF" name="PluginProcessor.h" compile="0" resource="0"

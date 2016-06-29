@@ -57,6 +57,17 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
 private:
+    enum
+    {
+        numFFTs = 4,
+        fftOrder = 10,
+        fftSize = 1 << fftOrder,
+        //fftOverlap = fftSize >> 1
+    };
+    
+    const int hopSize = fftSize / numFFTs;
+    
+    ScopedPointer<FFT> FFTs[numFFTs];
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (OdHarmoNobAudioProcessor)
 };
