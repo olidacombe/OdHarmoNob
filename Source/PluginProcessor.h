@@ -69,7 +69,8 @@ private:
     const int hopSize = fftSize / numFFTs;
     
     //ScopedPointer<FFT> FFTs[numFFTs];
-    ScopedPointer<Pfft> pfft;
+    //ScopedPointer<Pfft> pfft;
+    OwnedArray<Pfft> pffts;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (OdHarmoNobAudioProcessor)
 };

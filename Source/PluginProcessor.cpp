@@ -15,24 +15,12 @@
 //==============================================================================
 OdHarmoNobAudioProcessor::OdHarmoNobAudioProcessor()
 {
-    /*
-    for(int i=0; i<numFFTs; i++)
-    {
-        FFTs[i]=new FFT(fftSize, false);
-    }
-    */
-    pfft = new Pfft();
+
 }
 
 OdHarmoNobAudioProcessor::~OdHarmoNobAudioProcessor()
 {
-    /*
-    for(int i=0; i<numFFTs; i++)
-    {
-        FFTs[i]=nullptr;
-    }
-    */
-    pfft = nullptr;
+    pffts.clear();
 }
 
 //==============================================================================
@@ -93,6 +81,13 @@ void OdHarmoNobAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+    
+    const int totalNumInputChannels = getTotalNumInputChannels();
+    const int numberOfExistingPffts = pffts.size();
+    
+    for(int i=numberOfExistingPffts; i < totalNumInputChannels; i++) {
+        pffts.add(new Pfft(1024, 4));
+    }
 }
 
 void OdHarmoNobAudioProcessor::releaseResources()
@@ -130,6 +125,7 @@ void OdHarmoNobAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuff
 {
     const int totalNumInputChannels  = getTotalNumInputChannels();
     const int totalNumOutputChannels = getTotalNumOutputChannels();
+    const int bufferSize = buffer.getNumSamples();
 
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
@@ -138,13 +134,16 @@ void OdHarmoNobAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuff
     // when they first compile a plugin, but obviously you don't need to keep
     // this code if your algorithm always overwrites all the output channels.
     for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+        buffer.clear (i, 0, bufferSize);
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
         float* channelData = buffer.getWritePointer (channel);
+        Pfft *pfft = pffts[channel];
+        
+        pfft->processBlock(channelData, bufferSize);
 
         // ..do something to the data...
     }

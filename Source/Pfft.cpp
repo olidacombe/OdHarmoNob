@@ -10,17 +10,17 @@
 
 #include "Pfft.h"
 
-Pfft::Pfft(const int size, const int hopFac) : fftSize(size), overlapFactor(hopFac)
+Pfft::Pfft(const int size, const int hopFac) : fftSize(size), overlapFactor(hopFac),
+    preprocessBufferIndex(0)
 {
     fft = new FFT(fftSize, false);
     window = new LinearWindow(fftSize);
     
-    buffers = new float*[overlapFactor];
-    for(int i=0; i<overlapFactor; i++) {
-        buffers[i] = new float[fftSize];
-        for(int j=0; j<fftSize; j++) { // should ensure these initialize to 0
-            buffers[i][j] = 0;
-        }
+    hopSize = fftSize/overlapFactor; // ! presumptuousness 1
+    preprocessBufferSize = hopSize * (2*overlapFactor - 1); // ! presumtpuousness 1
+    preprocessBuffer = new float[preprocessBufferSize];
+    for(int i=0; i<preprocessBufferSize; i++) {
+        preprocessBuffer[i]=0;
     }
 }
 
@@ -28,10 +28,7 @@ Pfft::~Pfft()
 {
     fft = nullptr;
     window = nullptr;
-    for(int i=0; i<overlapFactor; i++) {
-        delete[] buffers[i];
-    }
-    delete[] buffers;
+    delete[] preprocessBuffer;
 }
 
 void Pfft::spectrumCallback(const float *in, float *out)
@@ -41,8 +38,13 @@ void Pfft::spectrumCallback(const float *in, float *out)
     }
 }
 
-void processBlock(float *buffer, const int bufferSize) {
-    
+void Pfft::processBlock(float *buffer, const int bufferSize) {
+    for(int i=0; i<bufferSize; i++) {
+        preprocessBuffer[preprocessBufferIndex++] = buffer[i];
+        if(preprocessBufferIndex >= preprocessBufferSize) {
+            preprocessBufferIndex = 0;
+        }
+    }
 }
 
 PfftWindow::PfftWindow(const int winSize) : size(winSize)

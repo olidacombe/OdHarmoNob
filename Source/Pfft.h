@@ -53,7 +53,10 @@ private:
     ScopedPointer<LinearWindow> window;
     int fftSize;
     int overlapFactor;
-    float **buffers;
+    int hopSize;
+    float *preprocessBuffer;
+    int preprocessBufferSize;
+    int preprocessBufferIndex;
 };
 
 
