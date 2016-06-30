@@ -25,6 +25,7 @@ public:
     ~PfftWindow();
     const int getSize() { return size; }
     const float operator[](const int index) { return windowData[index]; }
+    void applyTo(float* const buffer);
 protected:
     int size;
     float *windowData;
@@ -52,6 +53,7 @@ private:
     ScopedPointer<LinearWindow> window;
     int fftSize;
     int overlapFactor;
+    float **buffers;
 };
 
 

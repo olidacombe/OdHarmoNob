@@ -14,12 +14,24 @@ Pfft::Pfft(const int size, const int hopFac) : fftSize(size), overlapFactor(hopF
 {
     fft = new FFT(fftSize, false);
     window = new LinearWindow(fftSize);
+    
+    buffers = new float*[overlapFactor];
+    for(int i=0; i<overlapFactor; i++) {
+        buffers[i] = new float[fftSize];
+        for(int j=0; j<fftSize; j++) { // should ensure these initialize to 0
+            buffers[i][j] = 0;
+        }
+    }
 }
 
 Pfft::~Pfft()
 {
     fft = nullptr;
     window = nullptr;
+    for(int i=0; i<overlapFactor; i++) {
+        delete[] buffers[i];
+    }
+    delete[] buffers;
 }
 
 void Pfft::spectrumCallback(const float *in, float *out)
@@ -40,6 +52,14 @@ PfftWindow::PfftWindow(const int winSize) : size(winSize)
 
 PfftWindow::~PfftWindow() {
     delete[] windowData;
+}
+
+
+void PfftWindow::applyTo(float* const buffer)
+{
+    for(int i=0; i<size; i++) {
+        buffer[i] *= windowData[i];
+    }
 }
 
 LinearWindow::LinearWindow(const int winSize) : PfftWindow(winSize)
