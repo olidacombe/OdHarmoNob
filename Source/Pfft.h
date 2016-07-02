@@ -46,17 +46,41 @@ public:
     void processBlock(float *buffer, const int bufferSize);
     
 protected:
+    // not happy with this, check Meyers Effective C++ Item 35
     virtual void spectrumCallback(const float *input, float *output);
     
 private:
+    bool isPowerOf2(const int n) { return n > 0 && !(n & (n-1)); }
+    void pushSample(const float& sample, bool merge=false) {
+        if(merge) {
+            outputBuffer[outputBufferWriteIndex++] += sample;
+        } else {
+            outputBuffer[outputBufferWriteIndex++] = sample;
+        }
+        if(outputBufferWriteIndex >= fftSize) outputBufferWriteIndex = 0;
+    }
+    void initializeProcessBuffers();
+    void processFrame(float *const frame);
+    void mergeFrameToOutputBuffer(const float *const frame);
+
     ScopedPointer<FFT> fft;
     ScopedPointer<LinearWindow> window;
     int fftSize;
     int overlapFactor;
     int hopSize;
+    float **processBuffers;
+    float *outputBuffer;
+    int outputBufferWriteIndex;
+    int outputBufferSamplesReady;
+    int outputBufferReadIndex;
+    int outputBufferSize;
+    int *processBufferIndices;
+    /*
     float *preprocessBuffer;
+    float *processBuffer;
     int preprocessBufferSize;
     int preprocessBufferIndex;
+    */
 };
 
 
