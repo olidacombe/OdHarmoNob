@@ -186,16 +186,16 @@ template <typename FloatType>
 LinearWindow<FloatType>::LinearWindow(const int winSize)
     : PfftWindow<FloatType>(winSize)
 {
-    const int m = size/2;
+    const int m = this->size/2;
     for(int i=0; i<m; i++) {
-        windowData->setSample(0, i, i / static_cast<FloatType>(m));
+        this->windowData->setSample(0, i, i / static_cast<FloatType>(m));
     }
-    for(int i=m; i<size; i++) {
-        windowData->setSample(0, i, (size - i) / static_cast<FloatType>(m));
+    for(int i=m; i<this->size; i++) {
+        this->windowData->setSample(0, i, (this->size - i) / static_cast<FloatType>(m));
     }
 }
 
 // create our classes
 template class Pfft<float>;
 //template class PfftWindow<float>;
-template class LinearWindow<float>;
+//template class LinearWindow<float>;
