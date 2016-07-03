@@ -11,7 +11,7 @@
 #ifndef PLUGINPROCESSOR_H_INCLUDED
 #define PLUGINPROCESSOR_H_INCLUDED
 
-#include "../JuceLibraryCode/JuceHeader.h"
+#include "JuceHeader.h"
 #include "Pfft.h"
 
 
@@ -69,8 +69,8 @@ private:
     const int hopSize = fftSize / numFFTs;
     
     //ScopedPointer<FFT> FFTs[numFFTs];
-    //ScopedPointer<Pfft> pfft;
-    OwnedArray<Pfft> pffts;
+    ScopedPointer<Pfft<float>> pfft;
+    //OwnedArray<Pfft> pffts;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (OdHarmoNobAudioProcessor)
 };

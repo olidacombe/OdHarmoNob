@@ -15,12 +15,13 @@
 //==============================================================================
 OdHarmoNobAudioProcessor::OdHarmoNobAudioProcessor()
 {
-
+    pfft = new Pfft<float>(1024, 4, 1);
 }
 
 OdHarmoNobAudioProcessor::~OdHarmoNobAudioProcessor()
 {
-    pffts.clear();
+    pfft = nullptr;
+    //pffts.clear();
 }
 
 //==============================================================================
@@ -82,12 +83,17 @@ void OdHarmoNobAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     
+    
     const int totalNumInputChannels = getTotalNumInputChannels();
+    //pfft->setNumberOfChannels(totalNumInputChannels);
+    
+    /*
     const int numberOfExistingPffts = pffts.size();
     
     for(int i=numberOfExistingPffts; i < totalNumInputChannels; i++) {
         pffts.add(new Pfft(1024, 4));
     }
+    */
 }
 
 void OdHarmoNobAudioProcessor::releaseResources()
@@ -140,11 +146,17 @@ void OdHarmoNobAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuff
     // audio processing...
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
+        /*
         float* channelData = buffer.getWritePointer (channel);
         Pfft *pfft = pffts[channel];
         
+        
         pfft->processBlock(channelData, bufferSize);
 
+        */
+        
+        
+        
         // ..do something to the data...
     }
 }

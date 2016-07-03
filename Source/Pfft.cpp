@@ -10,8 +10,10 @@
 
 #include "Pfft.h"
 
-Pfft::Pfft(const int size, const int hopFac) : fftSize(size), overlapFactor(hopFac),
-    outputBufferWriteIndex(0), outputBufferSamplesReady(0), outputBufferReadIndex(0),
+template <typename T> Pfft<T>::Pfft(const int size, const int hopFac, const int numChannels)
+    : fftSize(size), overlapFactor(hopFac),
+    outputBufferWriteIndex(0),
+    outputBufferSamplesReady(0), outputBufferReadIndex(0),
     outputBufferSize(size)
 {
     // need to assert fftSize is a power of 2, and overlapFactor also, and < fftSize
@@ -20,6 +22,10 @@ Pfft::Pfft(const int size, const int hopFac) : fftSize(size), overlapFactor(hopF
     window = new LinearWindow(fftSize);
     
     hopSize = fftSize/overlapFactor; // both powers of 2, and fftSize > ovelapFactor
+    
+    setNumberOfChannels(numChannels);
+    
+    /*
     outputBuffer = new float[outputBufferSize];
     
     processBuffers = new float*[overlapFactor];
@@ -29,46 +35,68 @@ Pfft::Pfft(const int size, const int hopFac) : fftSize(size), overlapFactor(hopF
     }
     
     initializeProcessBuffers();
+    */
     
 }
 
-Pfft::~Pfft()
+template <typename FloatType> Pfft<FloatType>::~Pfft()
 {
     fft = nullptr;
     window = nullptr;
+    outputBuffer = nullptr;
+
+    /*
     for(int i=0; i<overlapFactor; i++) {
         delete[] processBuffers[i];
     }
     delete[] processBuffers;
+    */
+    
+    processBuffers.clear();
     delete[] processBufferIndices;
-    delete[] outputBuffer;
+    //delete[] outputBuffer;
 }
 
-void Pfft::initializeProcessBuffers()
+template <typename T> void Pfft<T>::setNumberOfChannels(const int numberOfChannels)
 {
+    numberOfAudioChannels = numberOfChannels;
+    initializeProcessBuffers();
+}
+
+template <typename T> void Pfft<T>::initializeProcessBuffers()
+{
+    processBuffers.clear();
+    
     int staggeredWriteOffset = fftSize;
     for(int i=1; i<=overlapFactor; i++) {
         const int bufferBeingInitialized = i%overlapFactor;
+        /*
         for(int j=0; j<fftSize; j++) {
             processBuffers[bufferBeingInitialized][j]=0;
         }
+        */
+        processBuffers.add(new AudioBuffer<T>(numberOfAudioChannels, fftSize));
         processBufferIndices[bufferBeingInitialized] = staggeredWriteOffset;
         staggeredWriteOffset -= hopSize;
     }
+    
+    outputBuffer = new AudioBuffer<T>(numberOfAudioChannels, outputBufferSize);
+    /*
     for(int i=0; i<outputBufferSize; i++) {
         outputBuffer[i]=0;
     }
+    */
 }
 
-void Pfft::spectrumCallback(const float *in, float *out)
+template <typename T> void Pfft<T>::spectrumCallback(const float *in, float *out)
 {
     for(int i=0; i<fftSize; i++) {
         out[i]=in[i];
     }
 }
 
-void Pfft::processBlock(float *buffer, const int bufferSize) {
-    
+template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<FloatType> &buffer) {
+    /*
     for(int i=0; i<bufferSize; i++) {
         for(int j=0; j<overlapFactor; j++) {
             float *const currentProcessBuffer = processBuffers[j];
@@ -89,6 +117,7 @@ void Pfft::processBlock(float *buffer, const int bufferSize) {
         }
         outputBufferSamplesReady -= bufferSize;
     }
+    */
 
             /* 
                 maybe PfftWindow::applyTo should not be in-place..?
@@ -108,7 +137,7 @@ void Pfft::processBlock(float *buffer, const int bufferSize) {
     
 }
 
-void Pfft::processFrame(float *const frame) {
+template <typename FloatType> void Pfft<FloatType>::processFrame(float *const frame) {
     
     //window->applyTo(frame);
     // then fft
@@ -118,13 +147,14 @@ void Pfft::processFrame(float *const frame) {
     window->applyTo(frame);
 }
 
-void Pfft::mergeFrameToOutputBuffer(const float *const frame) {
+template <typename FloatType> void Pfft<FloatType>::mergeFrameToOutputBuffer(const float *const frame) {
     int i;
     for(i=0; i<fftSize-hopSize; i++) {
-        pushSample(frame[i], true);
+        //pushSample(frame[i], true);
+        //outputBuffer->addSample(
     }
     for(; i<fftSize; i++) {
-        pushSample(frame[i]);
+        //pushSample(frame[i]);
     }
     outputBufferSamplesReady += hopSize;
 }
@@ -156,3 +186,6 @@ LinearWindow::LinearWindow(const int winSize) : PfftWindow(winSize)
         windowData[i] = (size - i) / static_cast<float>(m);
     }
 }
+
+// create our classes
+template class Pfft<float>;

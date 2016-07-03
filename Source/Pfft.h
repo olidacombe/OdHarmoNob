@@ -16,7 +16,7 @@
 #ifndef PFFT_H_INCLUDED
 #define PFFT_H_INCLUDED
 
-#include "../JuceLibraryCode/JuceHeader.h"
+#include "JuceHeader.h"
 
 class PfftWindow
 {
@@ -38,12 +38,14 @@ public:
     //~LinearWindow();
 };
 
-class Pfft
+
+template <typename FloatType> class Pfft
 {
 public:
-    Pfft(const int size=1024, const int hopFac=4);
+    Pfft(const int size=1024, const int hopFac=4, const int numChannels=1);
     virtual ~Pfft();
-    void processBlock(float *buffer, const int bufferSize);
+    void setNumberOfChannels(const int numberOfChannels);
+    void processBlock(AudioBuffer<FloatType> &buffer);
     
 protected:
     // not happy with this, check Meyers Effective C++ Item 35
@@ -51,36 +53,24 @@ protected:
     
 private:
     bool isPowerOf2(const int n) { return n > 0 && !(n & (n-1)); }
-    void pushSample(const float& sample, bool merge=false) {
-        if(merge) {
-            outputBuffer[outputBufferWriteIndex++] += sample;
-        } else {
-            outputBuffer[outputBufferWriteIndex++] = sample;
-        }
-        if(outputBufferWriteIndex >= fftSize) outputBufferWriteIndex = 0;
-    }
     void initializeProcessBuffers();
     void processFrame(float *const frame);
     void mergeFrameToOutputBuffer(const float *const frame);
 
     ScopedPointer<FFT> fft;
     ScopedPointer<LinearWindow> window;
+    OwnedArray<AudioBuffer<FloatType>> processBuffers;
+    ScopedPointer<AudioBuffer<FloatType>> outputBuffer;
+    
     int fftSize;
     int overlapFactor;
     int hopSize;
-    float **processBuffers;
-    float *outputBuffer;
+    int numberOfAudioChannels;
     int outputBufferWriteIndex;
     int outputBufferSamplesReady;
     int outputBufferReadIndex;
     int outputBufferSize;
     int *processBufferIndices;
-    /*
-    float *preprocessBuffer;
-    float *processBuffer;
-    int preprocessBufferSize;
-    int preprocessBufferIndex;
-    */
 };
 
 
