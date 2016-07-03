@@ -10,7 +10,7 @@
 
 #include "Pfft.h"
 
-template <typename T> Pfft<T>::Pfft(const int size, const int hopFac, const int numChannels)
+template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels)
     : fftSize(size), overlapFactor(hopFac),
     outputBufferWriteIndex(0),
     outputBufferSamplesReady(0), outputBufferReadIndex(0),
@@ -19,7 +19,7 @@ template <typename T> Pfft<T>::Pfft(const int size, const int hopFac, const int 
     // need to assert fftSize is a power of 2, and overlapFactor also, and < fftSize
     jassert(overlapFactor < fftSize && isPowerOf2(fftSize) && isPowerOf2(overlapFactor));
     fft = new FFT(fftSize, false);
-    window = new LinearWindow(fftSize);
+    window = new LinearWindow<FloatType>(fftSize);
     
     hopSize = fftSize/overlapFactor; // both powers of 2, and fftSize > ovelapFactor
     
@@ -137,17 +137,19 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
     
 }
 
-template <typename FloatType> void Pfft<FloatType>::processFrame(float *const frame) {
+template <typename FloatType> void Pfft<FloatType>::processFrame(const AudioBuffer<FloatType>& frame) {
     
     //window->applyTo(frame);
     // then fft
     // then ifft
     // then window again
     
-    window->applyTo(frame);
+    // re-work PfftWindow to use AudioBuffers instead ;)
+    //window->applyTo(frame);
 }
 
-template <typename FloatType> void Pfft<FloatType>::mergeFrameToOutputBuffer(const float *const frame) {
+template <typename FloatType> void Pfft<FloatType>::mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame) {
+    // the following might be replaced by calls to addFrom and copyFrom instead of loops
     int i;
     for(i=0; i<fftSize-hopSize; i++) {
         //pushSample(frame[i], true);
@@ -159,33 +161,41 @@ template <typename FloatType> void Pfft<FloatType>::mergeFrameToOutputBuffer(con
     outputBufferSamplesReady += hopSize;
 }
 
-PfftWindow::PfftWindow(const int winSize) : size(winSize)
+template <typename FloatType>
+PfftWindow<FloatType>::PfftWindow(const int winSize)
+    : size(winSize)
 {
-    windowData = new float[size];
+    windowData = new AudioBuffer<FloatType>(1, size);
 }
 
-PfftWindow::~PfftWindow() {
-    delete[] windowData;
+template <typename T> PfftWindow<T>::~PfftWindow() {
+    windowData = nullptr;
 }
 
 
-void PfftWindow::applyTo(float* const buffer)
+template <typename FloatType> void PfftWindow<FloatType>::applyTo(AudioBuffer<FloatType>& buffer)
 {
+    /*
     for(int i=0; i<size; i++) {
         buffer[i] *= windowData[i];
     }
+    */
 }
 
-LinearWindow::LinearWindow(const int winSize) : PfftWindow(winSize)
+template <typename FloatType>
+LinearWindow<FloatType>::LinearWindow(const int winSize)
+    : PfftWindow<FloatType>(winSize)
 {
     const int m = size/2;
     for(int i=0; i<m; i++) {
-        windowData[i] = i / static_cast<float>(m);
+        windowData->setSample(0, i, i / static_cast<FloatType>(m));
     }
     for(int i=m; i<size; i++) {
-        windowData[i] = (size - i) / static_cast<float>(m);
+        windowData->setSample(0, i, (size - i) / static_cast<FloatType>(m));
     }
 }
 
 // create our classes
 template class Pfft<float>;
+//template class PfftWindow<float>;
+template class LinearWindow<float>;

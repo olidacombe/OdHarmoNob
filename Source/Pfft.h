@@ -18,20 +18,20 @@
 
 #include "JuceHeader.h"
 
-class PfftWindow
+template <typename FloatType> class PfftWindow
 {
 public:
     PfftWindow(const int winSize);
     ~PfftWindow();
-    const int getSize() { return size; }
-    const float operator[](const int index) { return windowData[index]; }
-    void applyTo(float* const buffer);
+    const FloatType operator[](const int index) { return windowData->getSample(0, index); }
+    void applyTo(AudioBuffer<FloatType>& buffer);
 protected:
     int size;
-    float *windowData;
+    ScopedPointer<AudioBuffer<FloatType>> windowData;
 };
 
-class LinearWindow : public PfftWindow
+template <typename FloatType>
+class LinearWindow : public PfftWindow<FloatType>
 {
 public:
     LinearWindow(const int winSize);
@@ -54,11 +54,11 @@ protected:
 private:
     bool isPowerOf2(const int n) { return n > 0 && !(n & (n-1)); }
     void initializeProcessBuffers();
-    void processFrame(float *const frame);
-    void mergeFrameToOutputBuffer(const float *const frame);
+    void processFrame(const AudioBuffer<FloatType>& frame);
+    void mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame);
 
     ScopedPointer<FFT> fft;
-    ScopedPointer<LinearWindow> window;
+    ScopedPointer<LinearWindow<FloatType>> window;
     OwnedArray<AudioBuffer<FloatType>> processBuffers;
     ScopedPointer<AudioBuffer<FloatType>> outputBuffer;
     
