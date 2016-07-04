@@ -58,14 +58,10 @@ private:
     void mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame);
 
     ScopedPointer<FFT> fft;
-    ScopedPointer<LinearWindow<FloatType>> window;
-    ScopedPointer<AudioBuffer<FloatType>> processBuffer;
-    ScopedPointer<AudioBuffer<FloatType>> frameBuffer;
-    
-    //slated for removal
-    OwnedArray<AudioBuffer<FloatType>> processBuffers;
-    
-    ScopedPointer<AudioBuffer<FloatType>> outputBuffer;
+    ScopedPointer<LinearWindow<FloatType>> window; // our "window function" buffer to multiply frames by in and out
+    ScopedPointer<AudioBuffer<FloatType>> processBuffer; // stock up samples required for processing in windows here
+    ScopedPointer<AudioBuffer<FloatType>> frameBuffer; // this is what we copy from processBuffer and apply callback to
+    ScopedPointer<AudioBuffer<FloatType>> outputBuffer; // stock up ouput of processing here for dumps
     
     int fftSize;
     int overlapFactor;
@@ -79,13 +75,13 @@ private:
     int processBufferTriggerIndex;
     int frameBufferStartIndex;
     
-    // remove?
-    int *processBufferIndices;
+    FloatType windowMergeGain;
+
 };
 
 namespace PfftBufferUtils {
     template <typename T>
-    void ringBufferCopy(const AudioBuffer<T>& source, const int& sourceStartIndex, AudioBuffer<T>& dest, const int& destStartIndex, const int& numSamples, bool overlay = false);
+    void ringBufferCopy(const AudioBuffer<T>& source, const int& sourceStartIndex, AudioBuffer<T>& dest, const int& destStartIndex, const int& numSamples, bool overlay = false, const T& gain = 1);
 }
 
 #endif  // PFFT_H_INCLUDED

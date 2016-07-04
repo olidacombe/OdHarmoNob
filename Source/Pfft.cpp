@@ -15,7 +15,8 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
     processBufferWriteIndex(0), processBufferTriggerIndex(0),
     frameBufferStartIndex(0),
     outputBufferWriteIndex(0), outputBufferSamplesReady(0),
-    outputBufferReadIndex(0), outputBufferSize(size)
+    outputBufferReadIndex(0), outputBufferSize(size),
+    windowMergeGain(1)
 {
     // need to assert fftSize is a power of 2, and overlapFactor also, and < fftSize
     jassert(overlapFactor < fftSize && isPowerOf2(fftSize) && isPowerOf2(overlapFactor));
@@ -25,18 +26,7 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
     hopSize = fftSize/overlapFactor; // both powers of 2, and fftSize > ovelapFactor
     
     setNumberOfChannels(numChannels);
-    
-    /*
-    outputBuffer = new float[outputBufferSize];
-    
-    processBuffers = new float*[overlapFactor];
-    processBufferIndices = new int[overlapFactor];
-    for(int i=0; i<overlapFactor; i++) {
-        processBuffers[i] = new float[fftSize];
-    }
-    
-    initializeProcessBuffers();
-    */
+
     
 }
 
@@ -47,17 +37,6 @@ template <typename FloatType> Pfft<FloatType>::~Pfft()
     processBuffer = nullptr;
     frameBuffer = nullptr;
     outputBuffer = nullptr;
-
-    /*
-    for(int i=0; i<overlapFactor; i++) {
-        delete[] processBuffers[i];
-    }
-    delete[] processBuffers;
-    */
-    
-    processBuffers.clear();
-    delete[] processBufferIndices;
-    //delete[] outputBuffer;
 }
 
 template <typename T> void Pfft<T>::setNumberOfChannels(const int numberOfChannels)
@@ -68,21 +47,6 @@ template <typename T> void Pfft<T>::setNumberOfChannels(const int numberOfChanne
 
 template <typename T> void Pfft<T>::initializeProcessBuffers()
 {
-    processBuffers.clear();
-    
-    int staggeredWriteOffset = fftSize;
-    for(int i=1; i<=overlapFactor; i++) {
-        const int bufferBeingInitialized = i%overlapFactor;
-        /*
-        for(int j=0; j<fftSize; j++) {
-            processBuffers[bufferBeingInitialized][j]=0;
-        }
-        */
-        processBuffers.add(new AudioBuffer<T>(numberOfAudioChannels, fftSize));
-        processBufferIndices[bufferBeingInitialized] = staggeredWriteOffset;
-        staggeredWriteOffset -= hopSize;
-    }
-    
     processBuffer = new AudioBuffer<T>(numberOfAudioChannels, fftSize);
     processBufferWriteIndex = 0;
     processBufferTriggerIndex = 0;
@@ -92,11 +56,6 @@ template <typename T> void Pfft<T>::initializeProcessBuffers()
     outputBufferWriteIndex = 0;
     outputBufferSamplesReady = 0;
     outputBufferReadIndex = 0;
-    /*
-    for(int i=0; i<outputBufferSize; i++) {
-        outputBuffer[i]=0;
-    }
-    */
 }
 
 template <typename T> void Pfft<T>::spectrumCallback(const float *in, float *out)
@@ -108,7 +67,8 @@ template <typename T> void Pfft<T>::spectrumCallback(const float *in, float *out
 
 template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<FloatType> &buffer) {
     
-    int remainingSamplesToProcess = buffer.getNumSamples();
+    const int bufferSize = buffer.getNumSamples();
+    int remainingSamplesToProcess = bufferSize;
     int bufferReadIndex = 0;
     
     while(remainingSamplesToProcess > 0) {
@@ -158,9 +118,9 @@ template <typename FloatType> void Pfft<FloatType>::processFrame(AudioBuffer<Flo
 }
 
 template <typename FloatType> void Pfft<FloatType>::mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame) {
-    PfftBufferUtils::ringBufferCopy(frame, 0, *outputBuffer, outputBufferWriteIndex, fftSize - hopSize, true);
+    PfftBufferUtils::ringBufferCopy(frame, 0, *outputBuffer, outputBufferWriteIndex, fftSize - hopSize, true, windowMergeGain);
     outputBufferWriteIndex = (outputBufferWriteIndex + fftSize - hopSize) % outputBufferSize;
-    PfftBufferUtils::ringBufferCopy(frame, fftSize - hopSize, *outputBuffer, outputBufferWriteIndex, hopSize, false);
+    PfftBufferUtils::ringBufferCopy(frame, fftSize - hopSize, *outputBuffer, outputBufferWriteIndex, hopSize, false, windowMergeGain);
     outputBufferWriteIndex = (outputBufferWriteIndex + hopSize) % outputBufferSize;
     outputBufferSamplesReady += hopSize;
 }
@@ -206,7 +166,7 @@ LinearWindow<FloatType>::LinearWindow(const int winSize)
 
 
 template <typename T>
-void PfftBufferUtils::ringBufferCopy(const AudioBuffer<T>& source, const int& sourceStartIndex, AudioBuffer<T>& dest, const int& destStartIndex, const int& numSamples, bool overlay)
+void PfftBufferUtils::ringBufferCopy(const AudioBuffer<T>& source, const int& sourceStartIndex, AudioBuffer<T>& dest, const int& destStartIndex, const int& numSamples, bool overlay, const T& gain)
 {
     const int sourceBufferSize = source.getNumSamples();
     const int destBufferSize = dest.getNumSamples();
@@ -215,7 +175,10 @@ void PfftBufferUtils::ringBufferCopy(const AudioBuffer<T>& source, const int& so
     const int numSourceChannels = source.getNumChannels();
     const int numDestChannels = dest.getNumChannels();
     const int numChannels = jmin(numDestChannels, numSourceChannels);
-
+    
+    void (*copyFunc)(int, int, AudioBuffer<T>&, int, int, int, T);
+    //copyFunc = overlay ? dest.template addFrom<T> : dest.template copyFrom<T>;
+    
     /* // a bit heavy
     const int numSamplesToCopy = jmin(numSamples, destBufferSize);
     if(numSamplesToCopy < numSamples) {
@@ -236,7 +199,8 @@ void PfftBufferUtils::ringBufferCopy(const AudioBuffer<T>& source, const int& so
         
         // use function pointer to select overlay or not
         for(int c=0; c<numChannels; c++) {
-            dest.copyFrom(c, writeIndex, source, c, readIndex, samplesToCopy);
+            //dest.copyFrom(c, writeIndex, source, c, readIndex, samplesToCopy, gain);
+            dest.addFrom(c, writeIndex, source, c, readIndex, samplesToCopy, gain);
         }
         
         remainingSamplesToCopy -= samplesToCopy;
@@ -246,7 +210,5 @@ void PfftBufferUtils::ringBufferCopy(const AudioBuffer<T>& source, const int& so
     
 }
 
-
-//template void PfftBufferUtils::ringBufferCopy<float>;
-// create our classes
+// explicitly instantiate templated classes
 template class Pfft<float>;

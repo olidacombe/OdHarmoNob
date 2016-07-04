@@ -15,7 +15,7 @@
 //==============================================================================
 OdHarmoNobAudioProcessor::OdHarmoNobAudioProcessor()
 {
-    pfft = new Pfft<float>(1024, 4, 1);
+    //pfft = new Pfft<float>(1024, 4, 1);
 }
 
 OdHarmoNobAudioProcessor::~OdHarmoNobAudioProcessor()
@@ -79,21 +79,10 @@ void OdHarmoNobAudioProcessor::changeProgramName (int index, const String& newNa
 
 //==============================================================================
 void OdHarmoNobAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
-{
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
-    
-    
+{   
     const int totalNumInputChannels = getTotalNumInputChannels();
-    //pfft->setNumberOfChannels(totalNumInputChannels);
-    
-    /*
-    const int numberOfExistingPffts = pffts.size();
-    
-    for(int i=numberOfExistingPffts; i < totalNumInputChannels; i++) {
-        pffts.add(new Pfft(1024, 4));
-    }
-    */
+    pfft->setNumberOfChannels(totalNumInputChannels);
+
 }
 
 void OdHarmoNobAudioProcessor::releaseResources()
