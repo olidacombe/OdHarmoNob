@@ -137,60 +137,13 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
 
     }
     
-    /*
-    
-    could do with a ProcessBuffers class which can be ordered!
-    give them functions for setting write pointer position
-    which update remaining samples to fill tally
-    then order by that tally.
-    
-    Give them a drinkFrom function.... how do we keep track of
-    1) whether they're full
-    2) what the read index now is
-    
-    ... or maybe just do a buffer copy thing
-    
-    */
-    
-    /*
-    for(int i=0; i<bufferSize; i++) {
-        for(int j=0; j<overlapFactor; j++) {
-            float *const currentProcessBuffer = processBuffers[j];
-            currentProcessBuffer[processBufferIndices[j]++]=buffer[i];
-            if(processBufferIndices[j] >= fftSize) {
-                processBufferIndices[j]=0;
-                // ...and trigger a passthrough of the window
-                processFrame(currentProcessBuffer);
-                mergeFrameToOutputBuffer(currentProcessBuffer);
-            }
-        }
-    }
-    
     if(outputBufferSamplesReady >= bufferSize) {
-        for(int i=0; i<bufferSize; i++) {
-            buffer[i] = outputBuffer[outputBufferReadIndex++];
-            if(outputBufferReadIndex >= outputBufferSize) outputBufferReadIndex = 0;
-        }
-        outputBufferSamplesReady -= bufferSize;
+        PfftBufferUtils::ringBufferCopy(*outputBuffer, outputBufferReadIndex, buffer, 0, bufferSize);
+        outputBufferReadIndex = (outputBufferReadIndex + bufferSize) % outputBufferSize;
+    } else { // clear buffer
+        buffer.clear();
     }
-    */
-
-            /* 
-                maybe PfftWindow::applyTo should not be in-place..?
-            
-                we've hit a window boundary, window our last fftSize samples
-                perform fft
-                perform spectrumCallback
-                perform inverse fft
-                window again
-                overlay the first (overlapFactor - 1) * hopSize samples
-                and replace remaining hopSize (up to fftSize)
-                
-                Need to take care of wrapping around the buffer
-            
-            */
-
-    
+ 
 }
 
 template <typename FloatType> void Pfft<FloatType>::processFrame(AudioBuffer<FloatType>& frame) {
