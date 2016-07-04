@@ -113,48 +113,28 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
     
     while(remainingSamplesToProcess > 0) {
         const int samplesToProcess = jmin(processBufferTriggerIndex, remainingSamplesToProcess);
-        const int samplesToPushToEnd = jmin(outputBufferSize - outputBufferWriteIndex, samplesToProcess);
-        const int samplesToPushToBeginning = jmax(samplesToProcess - samplesToPushToEnd, 0);
         
-        // do the writes here
-        // samplesToPushToEnd should always be > 0
-        for(int c=0; c<numberOfAudioChannels; c++) {
-            processBuffer->copyFrom(c, outputBufferWriteIndex, buffer, c, bufferReadIndex, samplesToPushToEnd);
-            bufferReadIndex += samplesToPushToEnd;
-        }
-        if(samplesToPushToBeginning > 0) {
-            for(int c=0; c<numberOfAudioChannels; c++) {
-                processBuffer->copyFrom(c, 0, buffer, c, bufferReadIndex, samplesToPushToBeginning);
-                bufferReadIndex += samplesToPushToBeginning;
-            }
-        }
-        
+        PfftBufferUtils::ringBufferCopy(buffer, bufferReadIndex,
+            *processBuffer, processBufferWriteIndex, samplesToProcess);
         
         // update indices here
         processBufferWriteIndex = (processBufferWriteIndex + samplesToProcess) % fftSize;
-        
-        
         remainingSamplesToProcess -= samplesToProcess;
+        processBufferTriggerIndex -= samplesToProcess;
         
         if(processBufferTriggerIndex <= 0) {
-            processBufferTriggerIndex = hopSize;
+            processBufferTriggerIndex = hopSize; // would do += but jmin assignment of samplesToProcess should ensure ok
             frameBufferStartIndex = (frameBufferStartIndex + hopSize) % fftSize; // first flush starts at hopSize
             
             // flush through here
+            PfftBufferUtils::ringBufferCopy(*processBuffer, frameBufferStartIndex, *frameBuffer, 0, fftSize);
+            processFrame(*frameBuffer);
+            mergeFrameToOutputBuffer(*frameBuffer);
             
             outputBufferSamplesReady += hopSize;
         }
         
-        
-        
-        /*
-        // tiredd... 
-        int numSamplesToPushToProcessBuffer = 
-        
-        remainingSamplesToProcess -= numSamplesToPushToProcessBuffer;
-        // or
-        remainingSamplesToProcess -= hopSize;
-        */
+
     }
     
     /*
@@ -225,15 +205,10 @@ template <typename FloatType> void Pfft<FloatType>::processFrame(AudioBuffer<Flo
 }
 
 template <typename FloatType> void Pfft<FloatType>::mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame) {
-    // the following might be replaced by calls to addFrom and copyFrom instead of loops
-    int i;
-    for(i=0; i<fftSize-hopSize; i++) {
-        //pushSample(frame[i], true);
-        //outputBuffer->addSample(
-    }
-    for(; i<fftSize; i++) {
-        //pushSample(frame[i]);
-    }
+    PfftBufferUtils::ringBufferCopy(frame, 0, *outputBuffer, outputBufferWriteIndex, fftSize - hopSize, true);
+    outputBufferWriteIndex = (outputBufferWriteIndex + fftSize - hopSize) % outputBufferSize;
+    PfftBufferUtils::ringBufferCopy(frame, fftSize - hopSize, *outputBuffer, outputBufferWriteIndex, hopSize, false);
+    outputBufferWriteIndex = (outputBufferWriteIndex + hopSize) % outputBufferSize;
     outputBufferSamplesReady += hopSize;
 }
 
@@ -276,6 +251,7 @@ LinearWindow<FloatType>::LinearWindow(const int winSize)
     }
 }
 
+
 template <typename T>
 void PfftBufferUtils::ringBufferCopy(const AudioBuffer<T>& source, const int& sourceStartIndex, AudioBuffer<T>& dest, const int& destStartIndex, const int& numSamples, bool overlay)
 {
@@ -315,9 +291,9 @@ void PfftBufferUtils::ringBufferCopy(const AudioBuffer<T>& source, const int& so
         readIndex = (readIndex + samplesToCopy) % sourceBufferSize;
     }
     
-    
 }
 
 
+//template void PfftBufferUtils::ringBufferCopy<float>;
 // create our classes
 template class Pfft<float>;
