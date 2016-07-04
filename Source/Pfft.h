@@ -54,12 +54,17 @@ protected:
 private:
     bool isPowerOf2(const int n) { return n > 0 && !(n & (n-1)); }
     void initializeProcessBuffers();
-    void processFrame(const AudioBuffer<FloatType>& frame);
+    void processFrame(AudioBuffer<FloatType>& frame);
     void mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame);
 
     ScopedPointer<FFT> fft;
     ScopedPointer<LinearWindow<FloatType>> window;
+    ScopedPointer<AudioBuffer<FloatType>> processBuffer;
+    ScopedPointer<AudioBuffer<FloatType>> frameBuffer;
+    
+    //slated for removal
     OwnedArray<AudioBuffer<FloatType>> processBuffers;
+    
     ScopedPointer<AudioBuffer<FloatType>> outputBuffer;
     
     int fftSize;
@@ -70,9 +75,17 @@ private:
     int outputBufferSamplesReady;
     int outputBufferReadIndex;
     int outputBufferSize;
+    int processBufferWriteIndex;
+    int processBufferTriggerIndex;
+    int frameBufferStartIndex;
+    
+    // remove?
     int *processBufferIndices;
 };
 
-
+namespace PfftBufferUtils {
+    template <typename T>
+    void ringBufferCopy(const AudioBuffer<T>& source, const int& sourceStartIndex, AudioBuffer<T>& dest, const int& destStartIndex, const int& numSamples, bool overlay = false);
+}
 
 #endif  // PFFT_H_INCLUDED

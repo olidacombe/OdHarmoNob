@@ -12,9 +12,10 @@
 
 template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels)
     : fftSize(size), overlapFactor(hopFac),
-    outputBufferWriteIndex(0),
-    outputBufferSamplesReady(0), outputBufferReadIndex(0),
-    outputBufferSize(size)
+    processBufferWriteIndex(0), processBufferTriggerIndex(0),
+    frameBufferStartIndex(0),
+    outputBufferWriteIndex(0), outputBufferSamplesReady(0),
+    outputBufferReadIndex(0), outputBufferSize(size)
 {
     // need to assert fftSize is a power of 2, and overlapFactor also, and < fftSize
     jassert(overlapFactor < fftSize && isPowerOf2(fftSize) && isPowerOf2(overlapFactor));
@@ -43,6 +44,8 @@ template <typename FloatType> Pfft<FloatType>::~Pfft()
 {
     fft = nullptr;
     window = nullptr;
+    processBuffer = nullptr;
+    frameBuffer = nullptr;
     outputBuffer = nullptr;
 
     /*
@@ -80,7 +83,15 @@ template <typename T> void Pfft<T>::initializeProcessBuffers()
         staggeredWriteOffset -= hopSize;
     }
     
+    processBuffer = new AudioBuffer<T>(numberOfAudioChannels, fftSize);
+    processBufferWriteIndex = 0;
+    processBufferTriggerIndex = 0;
+    frameBuffer = new AudioBuffer<T>(numberOfAudioChannels, fftSize);
+    frameBufferStartIndex = 0;
     outputBuffer = new AudioBuffer<T>(numberOfAudioChannels, outputBufferSize);
+    outputBufferWriteIndex = 0;
+    outputBufferSamplesReady = 0;
+    outputBufferReadIndex = 0;
     /*
     for(int i=0; i<outputBufferSize; i++) {
         outputBuffer[i]=0;
@@ -96,6 +107,71 @@ template <typename T> void Pfft<T>::spectrumCallback(const float *in, float *out
 }
 
 template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<FloatType> &buffer) {
+    
+    int remainingSamplesToProcess = buffer.getNumSamples();
+    int bufferReadIndex = 0;
+    
+    while(remainingSamplesToProcess > 0) {
+        const int samplesToProcess = jmin(processBufferTriggerIndex, remainingSamplesToProcess);
+        const int samplesToPushToEnd = jmin(outputBufferSize - outputBufferWriteIndex, samplesToProcess);
+        const int samplesToPushToBeginning = jmax(samplesToProcess - samplesToPushToEnd, 0);
+        
+        // do the writes here
+        // samplesToPushToEnd should always be > 0
+        for(int c=0; c<numberOfAudioChannels; c++) {
+            processBuffer->copyFrom(c, outputBufferWriteIndex, buffer, c, bufferReadIndex, samplesToPushToEnd);
+            bufferReadIndex += samplesToPushToEnd;
+        }
+        if(samplesToPushToBeginning > 0) {
+            for(int c=0; c<numberOfAudioChannels; c++) {
+                processBuffer->copyFrom(c, 0, buffer, c, bufferReadIndex, samplesToPushToBeginning);
+                bufferReadIndex += samplesToPushToBeginning;
+            }
+        }
+        
+        
+        // update indices here
+        processBufferWriteIndex = (processBufferWriteIndex + samplesToProcess) % fftSize;
+        
+        
+        remainingSamplesToProcess -= samplesToProcess;
+        
+        if(processBufferTriggerIndex <= 0) {
+            processBufferTriggerIndex = hopSize;
+            frameBufferStartIndex = (frameBufferStartIndex + hopSize) % fftSize; // first flush starts at hopSize
+            
+            // flush through here
+            
+            outputBufferSamplesReady += hopSize;
+        }
+        
+        
+        
+        /*
+        // tiredd... 
+        int numSamplesToPushToProcessBuffer = 
+        
+        remainingSamplesToProcess -= numSamplesToPushToProcessBuffer;
+        // or
+        remainingSamplesToProcess -= hopSize;
+        */
+    }
+    
+    /*
+    
+    could do with a ProcessBuffers class which can be ordered!
+    give them functions for setting write pointer position
+    which update remaining samples to fill tally
+    then order by that tally.
+    
+    Give them a drinkFrom function.... how do we keep track of
+    1) whether they're full
+    2) what the read index now is
+    
+    ... or maybe just do a buffer copy thing
+    
+    */
+    
     /*
     for(int i=0; i<bufferSize; i++) {
         for(int j=0; j<overlapFactor; j++) {
@@ -137,7 +213,7 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
     
 }
 
-template <typename FloatType> void Pfft<FloatType>::processFrame(const AudioBuffer<FloatType>& frame) {
+template <typename FloatType> void Pfft<FloatType>::processFrame(AudioBuffer<FloatType>& frame) {
     
     //window->applyTo(frame);
     // then fft
@@ -145,7 +221,7 @@ template <typename FloatType> void Pfft<FloatType>::processFrame(const AudioBuff
     // then window again
     
     // re-work PfftWindow to use AudioBuffers instead ;)
-    //window->applyTo(frame);
+    window->applyTo(frame);
 }
 
 template <typename FloatType> void Pfft<FloatType>::mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame) {
@@ -175,11 +251,16 @@ template <typename T> PfftWindow<T>::~PfftWindow() {
 
 template <typename FloatType> void PfftWindow<FloatType>::applyTo(AudioBuffer<FloatType>& buffer)
 {
-    /*
-    for(int i=0; i<size; i++) {
-        buffer[i] *= windowData[i];
+    jassert(buffer.getNumSamples() == this->size);
+    const int numChannels = buffer.getNumChannels();
+    FloatType **bufferPointers = buffer.getArrayOfWritePointers();
+    const FloatType *windowPointer = windowData->getReadPointer(0);
+    
+    for(int c=0; c<numChannels; c++) {
+        for(int i=0; i<this->size; i++) {
+            bufferPointers[c][i] *= windowPointer[i];
+        }
     }
-    */
 }
 
 template <typename FloatType>
@@ -195,7 +276,48 @@ LinearWindow<FloatType>::LinearWindow(const int winSize)
     }
 }
 
+template <typename T>
+void PfftBufferUtils::ringBufferCopy(const AudioBuffer<T>& source, const int& sourceStartIndex, AudioBuffer<T>& dest, const int& destStartIndex, const int& numSamples, bool overlay)
+{
+    const int sourceBufferSize = source.getNumSamples();
+    const int destBufferSize = dest.getNumSamples();
+    
+    // a bit heavy
+    const int numSourceChannels = source.getNumChannels();
+    const int numDestChannels = dest.getNumChannels();
+    const int numChannels = jmin(numDestChannels, numSourceChannels);
+
+    /* // a bit heavy
+    const int numSamplesToCopy = jmin(numSamples, destBufferSize);
+    if(numSamplesToCopy < numSamples) {
+        sourceStartIndex = (sourceStartIndex + numSamples - numSamplesToCopy) % sourceBufferSize;
+        destStartIndex = (destStartIndex + numSamples - numSamplesToCopy) % destBufferSize;
+    }
+    */
+    
+    // discard excess instead ?
+    // or just forge ahead writing in a ring and let the implementor pay the price
+    
+    int remainingSamplesToCopy = numSamples;
+    int readIndex = sourceStartIndex % sourceBufferSize;
+    int writeIndex = destStartIndex % destBufferSize;
+    
+    while(remainingSamplesToCopy > 0) {
+        const int samplesToCopy = jmin(remainingSamplesToCopy, destBufferSize - writeIndex, sourceBufferSize - readIndex);
+        
+        // use function pointer to select overlay or not
+        for(int c=0; c<numChannels; c++) {
+            dest.copyFrom(c, writeIndex, source, c, readIndex, samplesToCopy);
+        }
+        
+        remainingSamplesToCopy -= samplesToCopy;
+        writeIndex = (writeIndex + samplesToCopy) % destBufferSize;
+        readIndex = (readIndex + samplesToCopy) % sourceBufferSize;
+    }
+    
+    
+}
+
+
 // create our classes
 template class Pfft<float>;
-//template class PfftWindow<float>;
-//template class LinearWindow<float>;
