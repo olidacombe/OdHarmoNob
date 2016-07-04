@@ -82,6 +82,7 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
             buffer, bufferReadIndex, samplesToProcess);
         
         // update indices here
+        bufferReadIndex += samplesToProcess;
         processBufferWriteIndex = (processBufferWriteIndex + samplesToProcess) % fftSize;
         remainingSamplesToProcess -= samplesToProcess;
         processBufferTriggerIndex -= samplesToProcess;
@@ -97,7 +98,6 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
             
             outputBufferSamplesReady += hopSize;
         }
-        
 
     }
     
