@@ -81,7 +81,8 @@ void OdHarmoNobAudioProcessor::changeProgramName (int index, const String& newNa
 void OdHarmoNobAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {   
     const int totalNumInputChannels = getTotalNumInputChannels();
-    pfft->setNumberOfChannels(totalNumInputChannels);
+    const int totalNumOutputChannels = getTotalNumOutputChannels();
+    pfft = new Pfft<float>(1024, 4, jmin(totalNumInputChannels, totalNumOutputChannels));
 
 }
 
@@ -133,21 +134,9 @@ void OdHarmoNobAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuff
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        /*
-        float* channelData = buffer.getWritePointer (channel);
-        Pfft *pfft = pffts[channel];
-        
-        
-        pfft->processBlock(channelData, bufferSize);
 
-        */
-        
-        
-        
-        // ..do something to the data...
-    }
+    pfft->processBlock(buffer);
+
 }
 
 //==============================================================================

@@ -12,6 +12,7 @@
 
 template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels)
     : fftSize(size), overlapFactor(hopFac),
+    numberOfAudioChannels(1),
     processBufferWriteIndex(0), processBufferTriggerIndex(0),
     frameBufferStartIndex(0),
     outputBufferWriteIndex(0), outputBufferSamplesReady(0),
