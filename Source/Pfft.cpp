@@ -17,7 +17,7 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
     frameBufferStartIndex(0),
     outputBufferWriteIndex(0), outputBufferSamplesReady(0),
     outputBufferReadIndex(0), outputBufferSize(size),
-    windowMergeGain(1)
+    windowMergeGain(0.5)
 {
     // need to assert fftSize is a power of 2, and overlapFactor also, and < fftSize
     jassert(overlapFactor < fftSize && isPowerOf2(fftSize) && isPowerOf2(overlapFactor));
@@ -49,11 +49,14 @@ template <typename T> void Pfft<T>::setNumberOfChannels(const int numberOfChanne
 template <typename T> void Pfft<T>::initializeProcessBuffers()
 {
     processBuffer = new AudioBuffer<T>(numberOfAudioChannels, fftSize);
+    processBuffer->clear();
     processBufferWriteIndex = 0;
     processBufferTriggerIndex = 0;
     frameBuffer = new AudioBuffer<T>(numberOfAudioChannels, fftSize);
+    frameBuffer->clear();
     frameBufferStartIndex = 0;
     outputBuffer = new AudioBuffer<T>(numberOfAudioChannels, outputBufferSize);
+    outputBuffer->clear();
     outputBufferWriteIndex = 0;
     outputBufferSamplesReady = 0;
     outputBufferReadIndex = 0;
@@ -75,8 +78,8 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
     while(remainingSamplesToProcess > 0) {
         const int samplesToProcess = jmin(processBufferTriggerIndex, remainingSamplesToProcess);
         
-        PfftBufferUtils::ringBufferCopy(buffer, bufferReadIndex,
-            *processBuffer, processBufferWriteIndex, samplesToProcess);
+        PfftBufferUtils::ringBufferCopy(*processBuffer, processBufferWriteIndex,
+            buffer, bufferReadIndex, samplesToProcess);
         
         // update indices here
         processBufferWriteIndex = (processBufferWriteIndex + samplesToProcess) % fftSize;
@@ -88,7 +91,7 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
             frameBufferStartIndex = (frameBufferStartIndex + hopSize) % fftSize; // first flush starts at hopSize
             
             // flush through here
-            PfftBufferUtils::ringBufferCopy(*processBuffer, frameBufferStartIndex, *frameBuffer, 0, fftSize);
+            PfftBufferUtils::ringBufferCopy(*frameBuffer, 0, *processBuffer, frameBufferStartIndex, fftSize);
             processFrame(*frameBuffer);
             mergeFrameToOutputBuffer(*frameBuffer);
             
@@ -99,8 +102,9 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
     }
     
     if(outputBufferSamplesReady >= bufferSize) {
-        PfftBufferUtils::ringBufferCopy(*outputBuffer, outputBufferReadIndex, buffer, 0, bufferSize);
+        PfftBufferUtils::ringBufferCopy(buffer, 0, *outputBuffer, outputBufferReadIndex, bufferSize);
         outputBufferReadIndex = (outputBufferReadIndex + bufferSize) % outputBufferSize;
+        outputBufferSamplesReady -= bufferSize;
     } else { // clear buffer
         buffer.clear();
     }
@@ -119,9 +123,9 @@ template <typename FloatType> void Pfft<FloatType>::processFrame(AudioBuffer<Flo
 }
 
 template <typename FloatType> void Pfft<FloatType>::mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame) {
-    PfftBufferUtils::ringBufferCopy(frame, 0, *outputBuffer, outputBufferWriteIndex, fftSize - hopSize, true, windowMergeGain);
+    PfftBufferUtils::ringBufferCopy(*outputBuffer, outputBufferWriteIndex, frame, 0, fftSize - hopSize, true, windowMergeGain);
     outputBufferWriteIndex = (outputBufferWriteIndex + fftSize - hopSize) % outputBufferSize;
-    PfftBufferUtils::ringBufferCopy(frame, fftSize - hopSize, *outputBuffer, outputBufferWriteIndex, hopSize, false, windowMergeGain);
+    PfftBufferUtils::ringBufferCopy( *outputBuffer, outputBufferWriteIndex, frame, fftSize - hopSize, hopSize, false, windowMergeGain);
     outputBufferWriteIndex = (outputBufferWriteIndex + hopSize) % outputBufferSize;
     outputBufferSamplesReady += hopSize;
 }
@@ -156,6 +160,7 @@ template <typename FloatType>
 LinearWindow<FloatType>::LinearWindow(const int winSize)
     : PfftWindow<FloatType>(winSize)
 {
+    std::cout << "instantiating LinearWindow" << std::endl;
     const int m = this->size/2;
     for(int i=0; i<m; i++) {
         this->windowData->setSample(0, i, i / static_cast<FloatType>(m));
@@ -163,11 +168,14 @@ LinearWindow<FloatType>::LinearWindow(const int winSize)
     for(int i=m; i<this->size; i++) {
         this->windowData->setSample(0, i, (this->size - i) / static_cast<FloatType>(m));
     }
+    for(int i=0; i<this->size; i++) {
+        std::cout << this->windowData->getSample(0, i) << std::endl;
+    }
 }
 
 
 template <typename T>
-void PfftBufferUtils::ringBufferCopy(const AudioBuffer<T>& source, const int& sourceStartIndex, AudioBuffer<T>& dest, const int& destStartIndex, const int& numSamples, bool overlay, const T& gain)
+void PfftBufferUtils::ringBufferCopy(AudioBuffer<T>& dest, const int& destStartIndex, const AudioBuffer<T>& source, const int& sourceStartIndex, const int& numSamples, bool overlay, const T& gain)
 {
     const int sourceBufferSize = source.getNumSamples();
     const int destBufferSize = dest.getNumSamples();

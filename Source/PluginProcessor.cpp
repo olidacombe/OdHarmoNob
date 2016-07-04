@@ -90,6 +90,7 @@ void OdHarmoNobAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
+    pfft = nullptr;
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
