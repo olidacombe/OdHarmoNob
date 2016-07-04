@@ -176,8 +176,11 @@ void PfftBufferUtils::ringBufferCopy(const AudioBuffer<T>& source, const int& so
     const int numDestChannels = dest.getNumChannels();
     const int numChannels = jmin(numDestChannels, numSourceChannels);
     
-    void (*copyFunc)(int, int, AudioBuffer<T>&, int, int, int, T);
-    //copyFunc = overlay ? dest.template addFrom<T> : dest.template copyFrom<T>;
+    
+    
+    void (*copyFunc)(AudioBuffer<T>&, int, int, const AudioBuffer<T>&, int, int, int, T);
+    copyFunc = overlay ? &PfftBufferUtils::audioBufferCopyOverlayWrapper<T> :
+                         &PfftBufferUtils::audioBufferCopyOverwriteWrapper<T>;
     
     /* // a bit heavy
     const int numSamplesToCopy = jmin(numSamples, destBufferSize);
@@ -199,8 +202,7 @@ void PfftBufferUtils::ringBufferCopy(const AudioBuffer<T>& source, const int& so
         
         // use function pointer to select overlay or not
         for(int c=0; c<numChannels; c++) {
-            //dest.copyFrom(c, writeIndex, source, c, readIndex, samplesToCopy, gain);
-            dest.addFrom(c, writeIndex, source, c, readIndex, samplesToCopy, gain);
+            copyFunc(dest, c, writeIndex, source, c, readIndex, samplesToCopy, gain);
         }
         
         remainingSamplesToCopy -= samplesToCopy;

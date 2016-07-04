@@ -82,6 +82,19 @@ private:
 namespace PfftBufferUtils {
     template <typename T>
     void ringBufferCopy(const AudioBuffer<T>& source, const int& sourceStartIndex, AudioBuffer<T>& dest, const int& destStartIndex, const int& numSamples, bool overlay = false, const T& gain = 1);
+    
+    template <typename T>
+    void audioBufferCopyOverwriteWrapper(AudioBuffer<T>& dest, int dc, int dsi, const AudioBuffer<T>& src, int sc, int ssi, int n, T g)
+    {
+        dest.copyFrom(dc, dsi, src, sc, ssi, n);
+    }
+    
+    template <typename T>
+    void audioBufferCopyOverlayWrapper(AudioBuffer<T>& dest, int dc, int dsi, const AudioBuffer<T>& src, int sc, int ssi, int n, T gain)
+    {
+        dest.addFrom(dc, dsi, src, sc, ssi, n, gain);
+    }
+    
 }
 
 #endif  // PFFT_H_INCLUDED
