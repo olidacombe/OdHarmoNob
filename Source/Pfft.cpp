@@ -23,6 +23,7 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
     jassert(overlapFactor < fftSize && isPowerOf2(fftSize) && isPowerOf2(overlapFactor));
     fft = new FFT(fftSize, false);
     window = new LinearWindow<FloatType>(fftSize);
+    //window = new WelchWindow<FloatType>(fftSize);
     
     hopSize = fftSize/overlapFactor; // both powers of 2, and fftSize > ovelapFactor
     
@@ -166,13 +167,20 @@ LinearWindow<FloatType>::LinearWindow(const int winSize)
     for(int i=m; i<this->size; i++) {
         this->windowData->setSample(0, i, (this->size - i) / static_cast<FloatType>(m));
     }
-    /*
-    for(int i=0; i<this->size; i++) {
-        std::cout << this->windowData->getSample(0, i) << std::endl;
-    }
-     */
 }
 
+template <typename T>
+WelchWindow<T>::WelchWindow(const int winSize)
+    : PfftWindow<T>(winSize)
+{
+    const T m = this->size/static_cast<T>(2);
+    const T s = static_cast<T>(this->size);
+    T* data = this->windowData->getWritePointer(0);
+    for(int i=0; i<s; i++)
+    {
+        data[i] = 1 - pow(((i-m)/s),2);
+    }
+}
 
 template <typename T>
 void PfftBufferUtils::ringBufferCopy(AudioBuffer<T>& dest, const int& destStartIndex, const AudioBuffer<T>& source, const int& sourceStartIndex, const int& numSamples, bool overlay, const T& gain)
@@ -186,10 +194,11 @@ void PfftBufferUtils::ringBufferCopy(AudioBuffer<T>& dest, const int& destStartI
     const int numChannels = jmin(numDestChannels, numSourceChannels);
     
     
-    
+    /*
     void (*copyFunc)(AudioBuffer<T>&, int, int, const AudioBuffer<T>&, int, int, int, T);
     copyFunc = overlay ? &PfftBufferUtils::audioBufferCopyOverlayWrapper<T> :
                          &PfftBufferUtils::audioBufferCopyOverwriteWrapper<T>;
+    */
     
     /* // a bit heavy
     const int numSamplesToCopy = jmin(numSamples, destBufferSize);
@@ -209,9 +218,13 @@ void PfftBufferUtils::ringBufferCopy(AudioBuffer<T>& dest, const int& destStartI
     while(remainingSamplesToCopy > 0) {
         const int samplesToCopy = jmin(remainingSamplesToCopy, destBufferSize - writeIndex, sourceBufferSize - readIndex);
         
+        if(!overlay) {
+            dest.clear(writeIndex, samplesToCopy);
+        }
         // use function pointer to select overlay or not
         for(int c=0; c<numChannels; c++) {
-            copyFunc(dest, c, writeIndex, source, c, readIndex, samplesToCopy, gain);
+            //copyFunc(dest, c, writeIndex, source, c, readIndex, samplesToCopy, gain);
+            dest.addFrom(c, writeIndex, source, c, readIndex, samplesToCopy, gain);
         }
         
         remainingSamplesToCopy -= samplesToCopy;

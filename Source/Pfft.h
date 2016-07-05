@@ -38,6 +38,13 @@ public:
     //~LinearWindow();
 };
 
+template <typename T>
+class WelchWindow : public PfftWindow<T>
+{
+public:
+    WelchWindow(const int winSize);
+};
+
 
 template <typename FloatType> class Pfft
 {
@@ -59,6 +66,7 @@ private:
 
     ScopedPointer<FFT> fft;
     ScopedPointer<LinearWindow<FloatType>> window; // our "window function" buffer to multiply frames by in and out
+    //ScopedPointer<WelchWindow<FloatType>> window;
     ScopedPointer<AudioBuffer<FloatType>> processBuffer; // stock up samples required for processing in windows here
     ScopedPointer<AudioBuffer<FloatType>> frameBuffer; // this is what we copy from processBuffer and apply callback to
     ScopedPointer<AudioBuffer<FloatType>> outputBuffer; // stock up ouput of processing here for dumps
@@ -80,20 +88,35 @@ private:
 };
 
 namespace PfftBufferUtils {
+    
     template <typename T>
     void ringBufferCopy(AudioBuffer<T>& dest, const int& destStartIndex, const AudioBuffer<T>& source, const int& sourceStartIndex, const int& numSamples, bool overlay = false, const T& gain = 1);
     
+    /*
     template <typename T>
-    void audioBufferCopyOverwriteWrapper(AudioBuffer<T>& dest, int dc, int dsi, const AudioBuffer<T>& src, int sc, int ssi, int n, T g)
+    void audioBufferCopyOverwriteWrapper(AudioBuffer<T>& dest, int dc, int dsi, const AudioBuffer<T>& src, int sc, int ssi, int n, T gain)
     {
-        dest.copyFrom(dc, dsi, src, sc, ssi, n);
+        //sadly can't use this for lack of gain param
+        //dest.copyFrom(dc, dsi, src, sc, ssi, n);
+        
+        const T* readPointer = src.getReadPointer(sc);
+        T* writePointer = dest.getWritePointer(dc);
+        for(int i=0; i<n; i++)
+        {
+            writePointer[i] = readPointer[i]*gain;
+        }
+        
+        
+        
     }
+    
     
     template <typename T>
     void audioBufferCopyOverlayWrapper(AudioBuffer<T>& dest, int dc, int dsi, const AudioBuffer<T>& src, int sc, int ssi, int n, T gain)
     {
         dest.addFrom(dc, dsi, src, sc, ssi, n, gain);
     }
+    */
     
 }
 
