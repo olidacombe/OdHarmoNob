@@ -8,7 +8,7 @@
               pluginCode="HmNb" pluginChannelConfigs="" pluginIsSynth="0" pluginWantsMidiIn="0"
               pluginProducesMidiOut="0" pluginIsMidiEffectPlugin="0" pluginEditorRequiresKeys="0"
               pluginAUExportPrefix="OdHarmoNobAU" pluginRTASCategory="" aaxIdentifier="com.olidacombe.OdHarmoNob"
-              pluginAAXCategory="AAX_ePlugInCategory_Dynamics" jucerVersion="4.2.1">
+              pluginAAXCategory="AAX_ePlugInCategory_Dynamics" jucerVersion="4.2.3">
   <MAINGROUP id="ZkIrku" name="OdHarmoNob">
     <GROUP id="{68FFCE1D-B100-93C1-218C-78DFE0C8CD74}" name="Source">
       <FILE id="lgQ7WJ" name="Pfft.cpp" compile="1" resource="0" file="Source/Pfft.cpp"/>

@@ -12,7 +12,7 @@
 
 template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels)
     : fftSize(size), overlapFactor(hopFac),
-    numberOfAudioChannels(1),
+    numberOfAudioChannels(numChannels), inputBlockSize(fftSize),
     processBufferWriteIndex(0), processBufferTriggerIndex(0),
     frameBufferStartIndex(0),
     outputBufferWriteIndex(0), outputBufferSamplesReady(0),
@@ -21,15 +21,15 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
 {
     // need to assert fftSize is a power of 2, and overlapFactor also, and < fftSize
     jassert(overlapFactor < fftSize && isPowerOf2(fftSize) && isPowerOf2(overlapFactor));
+    
+    hopSize = fftSize/overlapFactor; // both powers of 2, and fftSize > ovelapFactor
+    
     fft = new FFT(fftSize, false);
     window = new LinearWindow<FloatType>(fftSize);
     //window = new WelchWindow<FloatType>(fftSize);
     
-    hopSize = fftSize/overlapFactor; // both powers of 2, and fftSize > ovelapFactor
-    
     setNumberOfChannels(numChannels);
 
-    
 }
 
 template <typename FloatType> Pfft<FloatType>::~Pfft()
@@ -47,6 +47,24 @@ template <typename T> void Pfft<T>::setNumberOfChannels(const int numberOfChanne
     initializeProcessBuffers();
 }
 
+template <typename T> void Pfft<T>::setInputBlockSize(const int blockSize)
+{
+    inputBlockSize = blockSize;
+    // make sure outputBuffer has size at least blockSize + hopSize
+    const int minSz = inputBlockSize + hopSize;
+    outputBufferSize = pow(2, static_cast<int>(log2(minSz)) + 1);
+    initializeOutputBuffer();
+}
+
+template <typename T> void Pfft<T>::initializeOutputBuffer()
+{
+    outputBuffer = new AudioBuffer<T>(numberOfAudioChannels, outputBufferSize);
+    outputBuffer->clear();
+    outputBufferWriteIndex = 0;
+    outputBufferSamplesReady = 0;
+    outputBufferReadIndex = 0;
+}
+
 template <typename T> void Pfft<T>::initializeProcessBuffers()
 {
     processBuffer = new AudioBuffer<T>(numberOfAudioChannels, fftSize);
@@ -56,11 +74,8 @@ template <typename T> void Pfft<T>::initializeProcessBuffers()
     frameBuffer = new AudioBuffer<T>(numberOfAudioChannels, fftSize);
     frameBuffer->clear();
     frameBufferStartIndex = 0;
-    outputBuffer = new AudioBuffer<T>(numberOfAudioChannels, outputBufferSize);
-    outputBuffer->clear();
-    outputBufferWriteIndex = 0;
-    outputBufferSamplesReady = 0;
-    outputBufferReadIndex = 0;
+    
+    initializeOutputBuffer();
 }
 
 template <typename T> void Pfft<T>::spectrumCallback(const float *in, float *out)
@@ -89,7 +104,7 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
         processBufferTriggerIndex -= samplesToProcess;
         
         if(processBufferTriggerIndex <= 0) {
-            processBufferTriggerIndex = hopSize; // would do += but jmin assignment of samplesToProcess should ensure ok
+            processBufferTriggerIndex += hopSize; // could do = as jmin assignment of samplesToProcess should ensure ok
             frameBufferStartIndex = (frameBufferStartIndex + hopSize) % fftSize; // first flush starts at hopSize
             
             // flush through here
@@ -105,6 +120,7 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
         outputBufferReadIndex = (outputBufferReadIndex + bufferSize) % outputBufferSize;
         outputBufferSamplesReady -= bufferSize;
     } else { // clear buffer
+        //std::cout << "insufficient output samples" << std::endl;
         buffer.clear();
     }
  

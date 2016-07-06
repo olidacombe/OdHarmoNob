@@ -52,6 +52,7 @@ public:
     Pfft(const int size=1024, const int hopFac=4, const int numChannels=1);
     virtual ~Pfft();
     void setNumberOfChannels(const int numberOfChannels);
+    void setInputBlockSize(const int blockSize);
     void processBlock(AudioBuffer<FloatType> &buffer);
     
 protected:
@@ -61,6 +62,7 @@ protected:
 private:
     bool isPowerOf2(const int n) { return n > 0 && !(n & (n-1)); }
     void initializeProcessBuffers();
+    void initializeOutputBuffer();
     void processFrame(AudioBuffer<FloatType>& frame);
     void mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame);
 
@@ -75,6 +77,7 @@ private:
     int overlapFactor;
     int hopSize;
     int numberOfAudioChannels;
+    int inputBlockSize;
     int outputBufferWriteIndex;
     int outputBufferSamplesReady;
     int outputBufferReadIndex;
