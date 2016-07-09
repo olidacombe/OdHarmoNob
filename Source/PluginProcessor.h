@@ -58,6 +58,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
 private:
+/*
     enum
     {
         numFFTs = 4,
@@ -67,7 +68,7 @@ private:
     };
     
     const int hopSize = fftSize / numFFTs;
-    
+*/
     //ScopedPointer<FFT> FFTs[numFFTs];
     ScopedPointer<Pfft<float>> pfft;
     //OwnedArray<Pfft> pffts;

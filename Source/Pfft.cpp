@@ -23,9 +23,11 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
     // need to assert fftSize is a power of 2, and overlapFactor also, and < fftSize
     jassert(overlapFactor < fftSize && isPowerOf2(fftSize) && isPowerOf2(overlapFactor));
     
+    const int fftOrder = log2(fftSize);
     hopSize = fftSize/overlapFactor; // both powers of 2, and fftSize > ovelapFactor
     
-    fft = new FFT(fftSize, false);
+    fft = new FFT(fftOrder, false);
+    ifft = new FFT(fftOrder, true);
     window = new LinearWindow<FloatType>(fftSize);
     //window = new WelchWindow<FloatType>(fftSize);
     
@@ -42,6 +44,7 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
 template <typename FloatType> Pfft<FloatType>::~Pfft()
 {
     fft = nullptr;
+    ifft = nullptr;
     window = nullptr;
     processBuffer = nullptr;
     frameBuffer = nullptr;
@@ -82,7 +85,7 @@ template <typename T> void Pfft<T>::initializeProcessBuffers()
     processBuffer->clear();
     processBufferWriteIndex = 0;
     processBufferTriggerIndex = hopSize;
-    frameBuffer = new AudioBuffer<T>(numberOfAudioChannels, fftSize);
+    frameBuffer = new AudioBuffer<T>(numberOfAudioChannels, 2*fftSize);
     frameBuffer->clear();
     frameBufferStartIndex = 0;
     
@@ -141,14 +144,21 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
 }
 
 template <typename FloatType> void Pfft<FloatType>::processFrame(AudioBuffer<FloatType>& frame) {
+    const int numChannels = frame.getNumChannels();
+    FloatType **framePointers = frame.getArrayOfWritePointers();
     
-    //window->applyTo(frame);
-    // then fft
-    // then ifft
-    // then window again
-    
-    // re-work PfftWindow to use AudioBuffers instead ;)
     window->applyTo(frame);
+    // then fft
+    for(int c=0; c<numChannels; c++) {
+        fft->performRealOnlyForwardTransform(framePointers[c]);
+    }
+    // then ifft
+    for(int c=0; c<numChannels; c++) {
+        ifft->performRealOnlyInverseTransform(framePointers[c]);
+    }
+    // then window again
+    window->applyTo(frame);
+    
 }
 
 template <typename FloatType> void Pfft<FloatType>::mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame) {
@@ -173,7 +183,9 @@ template <typename T> PfftWindow<T>::~PfftWindow() {
 
 template <typename FloatType> void PfftWindow<FloatType>::applyTo(AudioBuffer<FloatType>& buffer)
 {
-    jassert(buffer.getNumSamples() == this->size);
+    //jassert(buffer.getNumSamples() == this->size);
+    // sometimes want to window start of buffer (may delete when using fftw instead of juce fft
+    jassert(buffer.getNumSamples() >= this->size);
     const int numChannels = buffer.getNumChannels();
     FloatType **bufferPointers = buffer.getArrayOfWritePointers();
     const FloatType *windowPointer = windowData->getReadPointer(0);
