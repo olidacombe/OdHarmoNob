@@ -66,6 +66,7 @@ private:
     void initializeOutputBuffer();
     void processFrame(AudioBuffer<FloatType>& frame);
     void mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame);
+    void calculateWindowMergeGain();
 
     ScopedPointer<FFT> fft, ifft;
     //ScopedPointer<LinearWindow<FloatType>> window; // our "window function" buffer to multiply frames by in and out

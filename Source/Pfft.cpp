@@ -70,6 +70,11 @@ template <typename T> void Pfft<T>::setInputBlockSize(const int blockSize)
     initializeOutputBuffer();
 }
 
+template <typename T> void Pfft<T>::calculateWindowMergeGain()
+{
+    
+}
+
 template <typename T> void Pfft<T>::initializeOutputBuffer()
 {
     outputBuffer = new AudioBuffer<T>(numberOfAudioChannels, outputBufferSize);
@@ -184,7 +189,7 @@ template <typename T> PfftWindow<T>::~PfftWindow() {
 template <typename FloatType> void PfftWindow<FloatType>::applyTo(AudioBuffer<FloatType>& buffer)
 {
     //jassert(buffer.getNumSamples() == this->size);
-    // sometimes want to window start of buffer (may delete when using fftw instead of juce fft
+    // sometimes want to window start of buffer (may delete when using fftw instead of juce fft)
     jassert(buffer.getNumSamples() >= this->size);
     const int numChannels = buffer.getNumChannels();
     FloatType **bufferPointers = buffer.getArrayOfWritePointers();
