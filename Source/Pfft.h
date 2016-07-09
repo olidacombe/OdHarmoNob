@@ -50,6 +50,7 @@ template <typename FloatType> class Pfft
 {
 public:
     Pfft(const int size=1024, const int hopFac=4, const int numChannels=1);
+    Pfft(const int size, const int hopFac, const int numChannels, const int blockSize);
     virtual ~Pfft();
     void setNumberOfChannels(const int numberOfChannels);
     void setInputBlockSize(const int blockSize);

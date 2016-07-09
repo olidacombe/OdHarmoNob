@@ -9,6 +9,7 @@
 */
 
 #include "Pfft.h"
+#include <boost/math/common_factor.hpp>
 
 template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels)
     : fftSize(size), overlapFactor(hopFac),
@@ -32,6 +33,12 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
 
 }
 
+template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels, const int blockSize)
+    : Pfft(size, hopFac, numChannels)
+{
+    setInputBlockSize(blockSize);
+}
+
 template <typename FloatType> Pfft<FloatType>::~Pfft()
 {
     fft = nullptr;
@@ -50,9 +57,13 @@ template <typename T> void Pfft<T>::setNumberOfChannels(const int numberOfChanne
 template <typename T> void Pfft<T>::setInputBlockSize(const int blockSize)
 {
     inputBlockSize = blockSize;
-    // make sure outputBuffer has size at least blockSize + hopSize
-    const int minSz = inputBlockSize + hopSize;
-    outputBufferSize = pow(2, static_cast<int>(log2(minSz)) + 1);
+
+    // I didn't properly figure this out, but this is based on intuition and seems to work.
+    // Would prefer really to sort it out properly.
+    outputBufferSize = jmax( boost::math::lcm(blockSize, hopSize), fftSize) + hopSize;
+    // The added hopSize is to prevent the "pure overwrite" from wrapping over past readIndex
+
+    std::cout << "outputBufferSize: "; std::cout << outputBufferSize << std::endl;
     initializeOutputBuffer();
 }
 
@@ -116,11 +127,14 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
     }
     
     if(outputBufferSamplesReady >= bufferSize) {
+        //some mad debug
+        //std::cout << "wi, ri, sr = "; std::cout << outputBufferWriteIndex; std::cout << " "; std::cout << outputBufferReadIndex; std::cout << " "; std::cout << outputBufferSamplesReady << std::endl;
+        
         PfftBufferUtils::ringBufferCopy(buffer, 0, *outputBuffer, outputBufferReadIndex, bufferSize);
         outputBufferReadIndex = (outputBufferReadIndex + bufferSize) % outputBufferSize;
         outputBufferSamplesReady -= bufferSize;
     } else { // clear buffer
-        //std::cout << "insufficient output samples" << std::endl;
+        std::cout << "insufficient output samples" << std::endl;
         buffer.clear();
     }
  
@@ -234,6 +248,7 @@ void PfftBufferUtils::ringBufferCopy(AudioBuffer<T>& dest, const int& destStartI
     while(remainingSamplesToCopy > 0) {
         const int samplesToCopy = jmin(remainingSamplesToCopy, destBufferSize - writeIndex, sourceBufferSize - readIndex);
         
+        // benchmark this against function pointer approach (commented out)
         if(!overlay) {
             dest.clear(writeIndex, samplesToCopy);
         }

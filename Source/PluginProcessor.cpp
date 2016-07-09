@@ -15,13 +15,12 @@
 //==============================================================================
 OdHarmoNobAudioProcessor::OdHarmoNobAudioProcessor()
 {
-    //pfft = new Pfft<float>(1024, 4, 1);
+
 }
 
 OdHarmoNobAudioProcessor::~OdHarmoNobAudioProcessor()
 {
     pfft = nullptr;
-    //pffts.clear();
 }
 
 //==============================================================================
@@ -82,8 +81,7 @@ void OdHarmoNobAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
 {   
     const int totalNumInputChannels = getTotalNumInputChannels();
     const int totalNumOutputChannels = getTotalNumOutputChannels();
-    pfft = new Pfft<float>(1024, 2, jmin(totalNumInputChannels, totalNumOutputChannels));
-    pfft->setInputBlockSize(samplesPerBlock);
+    pfft = new Pfft<float>(1024, 2, jmin(totalNumInputChannels, totalNumOutputChannels), samplesPerBlock);
 
 }
 
