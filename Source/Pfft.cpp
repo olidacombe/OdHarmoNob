@@ -28,8 +28,8 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
     
     fft = new FFT(fftOrder, false);
     ifft = new FFT(fftOrder, true);
-    window = new LinearWindow<FloatType>(fftSize);
-    //window = new WelchWindow<FloatType>(fftSize);
+    //window = new LinearWindow<FloatType>(fftSize);
+    window = new WelchWindow<FloatType>(fftSize);
     
     setNumberOfChannels(numChannels);
 
