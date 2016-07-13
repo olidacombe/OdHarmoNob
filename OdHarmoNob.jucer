@@ -23,11 +23,13 @@
     </GROUP>
   </MAINGROUP>
   <EXPORTFORMATS>
-    <XCODE_MAC targetFolder="Builds/MacOSX" vstFolder="" vst3Folder="" extraCompilerFlags="-I/usr/local/include">
+    <XCODE_MAC targetFolder="Builds/MacOSX" vstFolder="" vst3Folder="" extraCompilerFlags="-I/usr/local/include"
+               externalLibraries="fftw3" extraLinkerFlags="-L/usr/local/lib">
       <CONFIGURATIONS>
         <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="OdHarmoNob"
                        osxSDK="default" osxCompatibility="10.10 SDK"/>
-        <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="OdHarmoNob"/>
+        <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="OdHarmoNob"
+                       osxCompatibility="10.10 SDK"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_core" path="JUCE/modules"/>
