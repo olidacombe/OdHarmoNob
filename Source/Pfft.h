@@ -17,6 +17,7 @@
 #define PFFT_H_INCLUDED
 
 #include "JuceHeader.h"
+#include "OdFftwUtils.h"
 
 template <typename FloatType> class PfftWindow
 {
@@ -68,6 +69,7 @@ private:
     void mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame);
     FloatType calculateWindowMergeGain();
 
+    ScopedPointer<Od1dRealFftw<float>> fftw;
     ScopedPointer<FFT> fft, ifft;
     //ScopedPointer<LinearWindow<FloatType>> window; // our "window function" buffer to multiply frames by in and out
     ScopedPointer<PfftWindow<FloatType>> window;
