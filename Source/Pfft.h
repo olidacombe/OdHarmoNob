@@ -66,7 +66,7 @@ private:
     void initializeOutputBuffer();
     void processFrame(AudioBuffer<FloatType>& frame);
     void mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame);
-    void calculateWindowMergeGain();
+    FloatType calculateWindowMergeGain();
 
     ScopedPointer<FFT> fft, ifft;
     //ScopedPointer<LinearWindow<FloatType>> window; // our "window function" buffer to multiply frames by in and out
@@ -96,7 +96,7 @@ private:
 namespace PfftBufferUtils {
     
     template <typename T>
-    void ringBufferCopy(AudioBuffer<T>& dest, const int& destStartIndex, const AudioBuffer<T>& source, const int& sourceStartIndex, const int& numSamples, bool overlay = false, const T& gain = 1);
+    void ringBufferCopy(AudioBuffer<T>& dest, const int& destStartIndex, const AudioBuffer<T>& source, const int& sourceStartIndex, const int& numSamples, bool overlay = false, const T& gain = 1.0);
     
     /*
     template <typename T>

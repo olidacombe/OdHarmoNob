@@ -18,18 +18,21 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
     frameBufferStartIndex(0),
     outputBufferWriteIndex(0), outputBufferSamplesReady(0),
     outputBufferReadIndex(0), outputBufferSize(size),
-    windowMergeGain(0.2)
+    windowMergeGain(0.0)
 {
     // need to assert fftSize is a power of 2, and overlapFactor also, and < fftSize
     jassert(overlapFactor < fftSize && isPowerOf2(fftSize) && isPowerOf2(overlapFactor));
     
     const int fftOrder = log2(fftSize);
     hopSize = fftSize/overlapFactor; // both powers of 2, and fftSize > ovelapFactor
+
+    //window = new LinearWindow<FloatType>(fftSize);
+    window = new WelchWindow<FloatType>(fftSize);
+    windowMergeGain = calculateWindowMergeGain();
     
     fft = new FFT(fftOrder, false);
     ifft = new FFT(fftOrder, true);
-    //window = new LinearWindow<FloatType>(fftSize);
-    window = new WelchWindow<FloatType>(fftSize);
+
     
     setNumberOfChannels(numChannels);
 
@@ -70,9 +73,26 @@ template <typename T> void Pfft<T>::setInputBlockSize(const int blockSize)
     initializeOutputBuffer();
 }
 
-template <typename T> void Pfft<T>::calculateWindowMergeGain()
+template <typename T> T Pfft<T>::calculateWindowMergeGain()
 {
+    AudioBuffer<T> calcBuffer(1, fftSize + hopSize);
+    AudioBuffer<T> winBuffer(1, fftSize);
+    calcBuffer.clear();
+    for(int i=0; i<fftSize; i++) {
+        winBuffer.setSample(0, i, 1.0);
+    }
+    window->applyTo(winBuffer);
+    int winStartSample=0;
+    for(int i=0; i<overlapFactor; i++) {
+        PfftBufferUtils::ringBufferCopy(calcBuffer, winStartSample, winBuffer, 0, fftSize, true);
+        winStartSample+=hopSize;
+    }
     
+    T magnitude = calcBuffer.getMagnitude(0, fftSize);
+    if(magnitude <= 0.0) {
+        return 0.0;
+    }
+    return 1.0/magnitude;
 }
 
 template <typename T> void Pfft<T>::initializeOutputBuffer()
