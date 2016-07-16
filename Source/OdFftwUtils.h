@@ -18,8 +18,14 @@ class Od1dRealFftw {
 public:
     Od1dRealFftw(const int fftSize);
     ~Od1dRealFftw();
+    FloatType* getTimeDomainWritePointer();
+    FloatType* getFrequencyDomainWritePointer();
 private:
-    fftw_complex *frequencyDomainData;
+    int N;
+    FloatType *timeDomainData;
+    FloatType *frequencyDomainData;
+    //fftw_complex *frequencyDomainData;
+    fftw_plan forwardPlan, inversePlan;
 };
 
 #endif  // ODFFTWUTILS_H_INCLUDED
