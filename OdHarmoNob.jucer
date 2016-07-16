@@ -26,7 +26,7 @@
   </MAINGROUP>
   <EXPORTFORMATS>
     <XCODE_MAC targetFolder="Builds/MacOSX" vstFolder="" vst3Folder="" extraCompilerFlags="-I/usr/local/include"
-               externalLibraries="fftw3" extraLinkerFlags="-L/usr/local/lib">
+               externalLibraries="fftw3&#10;fftw3f" extraLinkerFlags="-L/usr/local/lib">
       <CONFIGURATIONS>
         <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="OdHarmoNob"
                        osxSDK="default" osxCompatibility="10.10 SDK"/>
