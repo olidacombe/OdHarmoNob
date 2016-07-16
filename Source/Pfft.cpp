@@ -11,14 +11,16 @@
 #include "Pfft.h"
 #include <boost/math/common_factor.hpp>
 
-template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels)
+using namespace OdPfft;
+
+template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels, frequencyDomainCallback callback)
     : fftSize(size), overlapFactor(hopFac),
     numberOfAudioChannels(numChannels), inputBlockSize(fftSize),
     processBufferWriteIndex(0), processBufferTriggerIndex(0),
     frameBufferStartIndex(0),
     outputBufferWriteIndex(0), outputBufferSamplesReady(0),
     outputBufferReadIndex(0), outputBufferSize(size),
-    windowMergeGain(0.0)
+    windowMergeGain(0.0), spectrumCallback(callback)
 {
     // need to assert fftSize is a power of 2, and overlapFactor also, and < fftSize
     jassert(overlapFactor < fftSize && isPowerOf2(fftSize) && isPowerOf2(overlapFactor));
@@ -37,8 +39,8 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
 
 }
 
-template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels, const int blockSize)
-    : Pfft(size, hopFac, numChannels)
+template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels, frequencyDomainCallback callback, const int blockSize)
+    : Pfft(size, hopFac, numChannels, callback)
 {
     setInputBlockSize(blockSize);
 }
@@ -112,14 +114,9 @@ template <typename T> void Pfft<T>::initializeProcessBuffers()
     frameBuffer->clear();
     frameBufferStartIndex = 0;
     
+    spectrumBuffer = *fftw->getFrequencyBuffer();
+    
     initializeOutputBuffer();
-}
-
-template <typename T> void Pfft<T>::spectrumCallback(const float *in, float *out)
-{
-    for(int i=0; i<fftSize; i++) {
-        out[i]=in[i];
-    }
 }
 
 template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<FloatType> &buffer) {
@@ -174,6 +171,8 @@ template <typename FloatType> void Pfft<FloatType>::processFrame(AudioBuffer<Flo
 
     fftw->forwardTransform();
     // do frequency domain stuff
+    
+    spectrumCallback(spectrumBuffer);
     
     // then inverse
     fftw->inverseTransform();
@@ -301,4 +300,4 @@ void PfftBufferUtils::ringBufferCopy(AudioBuffer<T>& dest, const int& destStartI
 }
 
 // explicitly instantiate templated classes
-template class Pfft<float>;
+template class OdPfft::Pfft<float>;

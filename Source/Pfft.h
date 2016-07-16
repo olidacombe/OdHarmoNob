@@ -19,6 +19,8 @@
 #include "JuceHeader.h"
 #include "OdFftwUtils.h"
 
+namespace OdPfft {
+
 template <typename FloatType> class PfftWindow
 {
 public:
@@ -46,12 +48,15 @@ public:
     WelchWindow(const int winSize);
 };
 
+template <typename FloatType>
+void defaultSpectrumCallback(AudioBuffer<FloatType>&) {};
 
 template <typename FloatType> class Pfft
 {
 public:
-    Pfft(const int size=1024, const int hopFac=4, const int numChannels=1);
-    Pfft(const int size, const int hopFac, const int numChannels, const int blockSize);
+    typedef void (*frequencyDomainCallback)(AudioBuffer<FloatType>&);
+    Pfft(const int size=1024, const int hopFac=4, const int numChannels=1, frequencyDomainCallback callback = defaultSpectrumCallback);
+    Pfft(const int size, const int hopFac, const int numChannels, frequencyDomainCallback callback, const int blockSize);
     virtual ~Pfft();
     void setNumberOfChannels(const int numberOfChannels);
     void setInputBlockSize(const int blockSize);
@@ -59,7 +64,7 @@ public:
     
 protected:
     // not happy with this, check Meyers Effective C++ Item 35
-    virtual void spectrumCallback(const float *input, float *output);
+    
     
 private:
     bool isPowerOf2(const int n) { return n > 0 && !(n & (n-1)); }
@@ -69,6 +74,8 @@ private:
     void mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame);
     FloatType calculateWindowMergeGain();
 
+    frequencyDomainCallback spectrumCallback;
+    
     ScopedPointer<OdFftwUtils::Od1dRealFftw<FloatType>> fftw;
     ScopedPointer<PfftWindow<FloatType>> window; // our "window function" buffer to multiply frames by in and out
     ScopedPointer<AudioBuffer<FloatType>> processBuffer; // stock up samples required for processing in windows here
@@ -123,6 +130,8 @@ namespace PfftBufferUtils {
     }
     */
     
+}
+
 }
 
 #endif  // PFFT_H_INCLUDED
