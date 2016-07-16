@@ -173,6 +173,7 @@ template <typename FloatType> void Pfft<FloatType>::processFrame(AudioBuffer<Flo
     // do frequency domain stuff
     
     spectrumCallback(spectrumBuffer);
+    spectrumBuffer.clear(); // still get sound - I must be confused and tired
     
     // then inverse
     fftw->inverseTransform();
