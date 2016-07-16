@@ -11,19 +11,35 @@
 #ifndef ODFFTWUTILS_H_INCLUDED
 #define ODFFTWUTILS_H_INCLUDED
 
+#include "JuceHeader.h"
 #include <fftw3.h>
 
 namespace OdFftwUtils {
 
 template <typename FloatType>
-class Od1dRealFftw {
+class Od1dRealFftwPlan {
 public:
-    Od1dRealFftw(const int fftSize);
-    ~Od1dRealFftw();
-    FloatType* getTimeDomainWritePointer();
-    FloatType* getFrequencyDomainWritePointer();
+    Od1dRealFftwPlan(const int fftSize)
+    : N(fftSize)
+    {
+        initializeIoArrays();
+        createExecutionPlans(N, timeDomainData, frequencyDomainData, FFTW_MEASURE);
+    }
+    ~Od1dRealFftwPlan() {
+        destroyExecutionPlans();
+        destroyIoArrays();
+    }
+    FloatType* getTimeDomainWritePointer()
+    {
+        return timeDomainData;
+    }
+    FloatType* getFrequencyDomainWritePointer()
+    {
+        return frequencyDomainData;
+    }
 private:
-    int N;
+    const int N;
+    //int numberOfChannels;
     FloatType *timeDomainData;
     FloatType *frequencyDomainData;
     fftwf_plan forwardPlan, inversePlan;
@@ -47,6 +63,22 @@ private:
         fftwf_destroy_plan(inversePlan);
     }
 
+};
+
+template <typename FloatType>
+class Od1dRealFftw {
+public:
+    Od1dRealFftw(const int fftSize, const int numChannels);
+    ~Od1dRealFftw();
+    AudioBuffer<FloatType>* getFrequencyBuffer() {
+        return frequencyBuffer;
+    }
+
+private:
+    const int N, numberOfChannels;
+    FloatType **inputArrays, **outputArrays;
+    OwnedArray<Od1dRealFftwPlan<FloatType>> fftwPlans;
+    ScopedPointer<AudioBuffer<FloatType>> audioBuffer, frequencyBuffer;
 };
 
 // this is a bit of a ballache

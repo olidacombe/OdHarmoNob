@@ -13,30 +13,32 @@
 
 namespace OdFftwUtils {
 
-// this will only work with float for now - needs to match type though :S, probably want to construct
-// FrameBuffer using the same address
-template <typename FloatType> Od1dRealFftw<FloatType>::Od1dRealFftw(const int fftSize) {
-    N = fftSize;
-
-    initializeIoArrays();
-    createExecutionPlans(N, timeDomainData, frequencyDomainData, FFTW_MEASURE);
+template <typename FloatType> Od1dRealFftw<FloatType>::Od1dRealFftw(const int fftSize, const int numChannels)
+: N(fftSize), numberOfChannels(numChannels)
+{
+    inputArrays = new FloatType*[numberOfChannels];
+    outputArrays = new FloatType*[numberOfChannels];
+    for(int c=0; c<numberOfChannels; c++) {
+        Od1dRealFftwPlan<FloatType> *newPlan = new Od1dRealFftwPlan<FloatType>(N);
+        fftwPlans.add(newPlan);
+        inputArrays[c] = newPlan->getTimeDomainWritePointer();
+        outputArrays[c] = newPlan->getFrequencyDomainWritePointer();
+    }
     
+    audioBuffer = new AudioBuffer<FloatType>(inputArrays, numberOfChannels, N);
+    frequencyBuffer = new AudioBuffer<FloatType>(outputArrays, numberOfChannels, N);
+}
+    
+ 
+template <typename FloatType> Od1dRealFftw<FloatType>::~Od1dRealFftw()
+{
+    audioBuffer = nullptr;
+    frequencyBuffer = nullptr;
+    fftwPlans.clear();
+    delete[] inputArrays;
+    delete[] outputArrays;
 }
 
-template <typename FloatType> Od1dRealFftw<FloatType>::~Od1dRealFftw() {
-    destroyExecutionPlans();
-    destroyIoArrays();
-}
-
-template <typename T> T* Od1dRealFftw<T>::getTimeDomainWritePointer() {
-    return timeDomainData;
-}
-
-template <typename T> T* Od1dRealFftw<T>::getFrequencyDomainWritePointer() {
-    return frequencyDomainData;
-}
-
-//template class Od1dRealFftw<double>;
 template class Od1dRealFftw<float>;
 
 }
