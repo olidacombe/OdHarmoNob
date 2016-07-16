@@ -114,7 +114,7 @@ template <typename T> void Pfft<T>::initializeProcessBuffers()
     frameBuffer->clear();
     frameBufferStartIndex = 0;
     
-    spectrumBuffer = *fftw->getFrequencyBuffer();
+    spectrumBuffer = fftw->getFrequencyBuffer();
     
     initializeOutputBuffer();
 }
@@ -172,8 +172,7 @@ template <typename FloatType> void Pfft<FloatType>::processFrame(AudioBuffer<Flo
     fftw->forwardTransform();
     // do frequency domain stuff
     
-    spectrumCallback(spectrumBuffer);
-    spectrumBuffer.clear(); // still get sound - I must be confused and tired
+    spectrumCallback(*spectrumBuffer);
     
     // then inverse
     fftw->inverseTransform();

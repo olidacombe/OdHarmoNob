@@ -14,11 +14,8 @@
 void spectrumShuffle(float* freqs, const int n) {
     const int m=n/2;
     for(int b=0; b<m; b++) {
-        freqs[b]=0;
-        /*
         freqs[m+b]=freqs[b];
         freqs[b]=0;
-        */
     }
 }
 
@@ -30,13 +27,15 @@ void spectrumCallback(AudioBuffer<float>& spectrum) {
     // experiment to see if anything's happening
     const int m=size/2;
     for(int c=0; c<channels; c++) {
-        //spectrumShuffle(spectrumPointers[c], m);
+        spectrumShuffle(spectrumPointers[c], m);
+        /*
         for(int i=0; i<m; i++) {
             spectrumPointers[c][i]=static_cast <float> (std::rand()) / static_cast <float> (RAND_MAX);
         }
+        */
     }
     
-    spectrum.clear();
+    //spectrum.clear();
     
 }
 

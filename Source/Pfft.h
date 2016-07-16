@@ -79,7 +79,7 @@ private:
     ScopedPointer<OdFftwUtils::Od1dRealFftw<FloatType>> fftw;
     ScopedPointer<PfftWindow<FloatType>> window; // our "window function" buffer to multiply frames by in and out
     ScopedPointer<AudioBuffer<FloatType>> processBuffer; // stock up samples required for processing in windows here
-    AudioBuffer<FloatType>* frameBuffer, spectrumBuffer; // these are what we copy from processBuffer and apply callback to
+    AudioBuffer<FloatType> *frameBuffer, *spectrumBuffer; // these are what we copy from processBuffer and apply callback to
     ScopedPointer<AudioBuffer<FloatType>> outputBuffer; // stock up ouput of processing here for dumps
     
     int fftSize;
