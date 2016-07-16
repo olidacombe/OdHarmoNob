@@ -69,13 +69,10 @@ private:
     void mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame);
     FloatType calculateWindowMergeGain();
 
-    ScopedPointer<FFT> fft, ifft;
     ScopedPointer<OdFftwUtils::Od1dRealFftw<FloatType>> fftw;
-    //ScopedPointer<LinearWindow<FloatType>> window; // our "window function" buffer to multiply frames by in and out
-    ScopedPointer<PfftWindow<FloatType>> window;
-    //ScopedPointer<WelchWindow<FloatType>> window;
+    ScopedPointer<PfftWindow<FloatType>> window; // our "window function" buffer to multiply frames by in and out
     ScopedPointer<AudioBuffer<FloatType>> processBuffer; // stock up samples required for processing in windows here
-    ScopedPointer<AudioBuffer<FloatType>> frameBuffer; // this is what we copy from processBuffer and apply callback to
+    AudioBuffer<FloatType>* frameBuffer, spectrumBuffer; // these are what we copy from processBuffer and apply callback to
     ScopedPointer<AudioBuffer<FloatType>> outputBuffer; // stock up ouput of processing here for dumps
     
     int fftSize;

@@ -39,6 +39,20 @@ template <typename FloatType> Od1dRealFftw<FloatType>::~Od1dRealFftw()
     delete[] outputArrays;
 }
 
+template <typename FloatType> void Od1dRealFftw<FloatType>::forwardTransform()
+{
+    for(int c=0; c<numberOfChannels; c++) {
+        fftwPlans[c]->forwardTransform();
+    }
+}
+
+template <typename FloatType> void Od1dRealFftw<FloatType>::inverseTransform()
+{
+    for(int c=0; c<numberOfChannels; c++) {
+        fftwPlans[c]->inverseTransform();
+    }
+}
+
 template class Od1dRealFftw<float>;
 
 }

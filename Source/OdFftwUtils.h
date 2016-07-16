@@ -29,6 +29,12 @@ public:
         destroyExecutionPlans();
         destroyIoArrays();
     }
+    void forwardTransform() {
+        fftwf_execute(forwardPlan);
+    }
+    void inverseTransform() {
+        fftwf_execute(inversePlan);
+    }
     FloatType* getTimeDomainWritePointer()
     {
         return timeDomainData;
@@ -73,6 +79,11 @@ public:
     AudioBuffer<FloatType>* getFrequencyBuffer() {
         return frequencyBuffer;
     }
+    AudioBuffer<FloatType>* getAudioBuffer() {
+        return audioBuffer;
+    }
+    void forwardTransform();
+    void inverseTransform();
 
 private:
     const int N, numberOfChannels;
