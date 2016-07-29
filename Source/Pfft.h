@@ -48,14 +48,34 @@ public:
     WelchWindow(const int winSize);
 };
 
+/*
 template <typename FloatType>
 void defaultSpectrumCallback(AudioBuffer<FloatType>&) {};
+*/
 
 template <typename FloatType> class Pfft
 {
 public:
     typedef void (*frequencyDomainCallback)(AudioBuffer<FloatType>&);
-    Pfft(const int size=1024, const int hopFac=4, const int numChannels=1, frequencyDomainCallback callback = defaultSpectrumCallback);
+    void defaultSpectrumCallback(AudioBuffer<FloatType>& buf) {};
+    
+    class frequencyDomainCallbackObject
+    {
+        public:
+            virtual ~frequencyDomainCallbackObject() {};
+            virtual void spectrumCallback(AudioBuffer<FloatType>&) = 0;
+    };
+    
+    class defaultDomainCallbackObject : public frequencyDomainCallbackObject
+    {
+        public:
+            defaultDomainCallbackObject(frequencyDomainCallback cb) : callback(cb) {};
+            void spectrumCallback(AudioBuffer<FloatType>& buf) override {};
+        private:
+            frequencyDomainCallback callback;
+    };
+    
+    Pfft(const int size=1024, const int hopFac=4, const int numChannels=1, frequencyDomainCallback callback = &defaultSpectrumCallback);
     Pfft(const int size, const int hopFac, const int numChannels, frequencyDomainCallback callback, const int blockSize);
     virtual ~Pfft();
     void setNumberOfChannels(const int numberOfChannels);
@@ -74,7 +94,8 @@ private:
     void mergeFrameToOutputBuffer(const AudioBuffer<FloatType>& frame);
     FloatType calculateWindowMergeGain();
 
-    frequencyDomainCallback spectrumCallback;
+    //frequencyDomainCallback spectrumCallback;
+    ScopedPointer<frequencyDomainCallbackObject> spectrumCallbackObject;
     
     ScopedPointer<OdFftwUtils::Od1dRealFftw<FloatType>> fftw;
     ScopedPointer<PfftWindow<FloatType>> window; // our "window function" buffer to multiply frames by in and out

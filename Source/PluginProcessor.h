@@ -72,6 +72,8 @@ private:
 */
     //ScopedPointer<FFT> FFTs[numFFTs];
     ScopedPointer<OdPfft::Pfft<float>> pfft;
+    ScopedPointer<AudioBuffer<float>> readonlySpectrumCopyBuffer;
+    
     //OwnedArray<Pfft> pffts;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (OdHarmoNobAudioProcessor)

@@ -11,32 +11,9 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-void spectrumShuffle(float* freqs, const int n) {
-    const int m=n/2;
-    for(int b=0; b<m; b++) {
-        freqs[m+b]=freqs[b];
-        freqs[b]=0;
-    }
-}
 
 void spectrumCallback(AudioBuffer<float>& spectrum) {
-    const int size = spectrum.getNumSamples();
-    const int channels = spectrum.getNumChannels();
-    float **spectrumPointers = spectrum.getArrayOfWritePointers();
-    
-    // experiment to see if anything's happening
-    const int m=size/2;
-    for(int c=0; c<channels; c++) {
-        spectrumShuffle(spectrumPointers[c], m);
-        /*
-        for(int i=0; i<m; i++) {
-            spectrumPointers[c][i]=static_cast <float> (std::rand()) / static_cast <float> (RAND_MAX);
-        }
-        */
-    }
-    
-    //spectrum.clear();
-    
+
 }
 
 
@@ -49,6 +26,7 @@ OdHarmoNobAudioProcessor::OdHarmoNobAudioProcessor()
 OdHarmoNobAudioProcessor::~OdHarmoNobAudioProcessor()
 {
     pfft = nullptr;
+    readonlySpectrumCopyBuffer = nullptr;
 }
 
 //==============================================================================
@@ -109,7 +87,9 @@ void OdHarmoNobAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
 {   
     const int totalNumInputChannels = getTotalNumInputChannels();
     const int totalNumOutputChannels = getTotalNumOutputChannels();
-    pfft = new OdPfft::Pfft<float>(1024, 2, jmin(totalNumInputChannels, totalNumOutputChannels), spectrumCallback, samplesPerBlock);
+    const int numberOfProcessChannels = jmin(totalNumInputChannels, totalNumOutputChannels);
+    pfft = new OdPfft::Pfft<float>(1024, 2, numberOfProcessChannels, spectrumCallback, samplesPerBlock);
+    readonlySpectrumCopyBuffer = new AudioBuffer<float>(numberOfProcessChannels, samplesPerBlock);
 
 }
 
@@ -118,6 +98,7 @@ void OdHarmoNobAudioProcessor::releaseResources()
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
     pfft = nullptr;
+    readonlySpectrumCopyBuffer = nullptr;
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations

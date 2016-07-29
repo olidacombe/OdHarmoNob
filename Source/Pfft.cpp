@@ -20,7 +20,7 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
     frameBufferStartIndex(0),
     outputBufferWriteIndex(0), outputBufferSamplesReady(0),
     outputBufferReadIndex(0), outputBufferSize(size),
-    windowMergeGain(0.0), spectrumCallback(callback)
+    windowMergeGain(0.0)
 {
     // need to assert fftSize is a power of 2, and overlapFactor also, and < fftSize
     jassert(overlapFactor < fftSize && isPowerOf2(fftSize) && isPowerOf2(overlapFactor));
@@ -33,7 +33,8 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
     windowMergeGain = calculateWindowMergeGain();
     
     fftw = new OdFftwUtils::Od1dRealFftw<FloatType>(fftSize, numberOfAudioChannels);
-
+    
+    spectrumCallbackObject = new defaultDomainCallbackObject(callback);
     
     setNumberOfChannels(numChannels);
 
@@ -47,6 +48,7 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
 
 template <typename FloatType> Pfft<FloatType>::~Pfft()
 {
+    spectrumCallbackObject = nullptr;
     fftw = nullptr;
     window = nullptr;
     processBuffer = nullptr;
@@ -172,7 +174,7 @@ template <typename FloatType> void Pfft<FloatType>::processFrame(AudioBuffer<Flo
     fftw->forwardTransform();
     // do frequency domain stuff
     
-    spectrumCallback(*spectrumBuffer);
+    spectrumCallbackObject->spectrumCallback(*spectrumBuffer);
     
     // then inverse
     fftw->inverseTransform();
