@@ -26,7 +26,6 @@ OdHarmoNobAudioProcessor::OdHarmoNobAudioProcessor()
 OdHarmoNobAudioProcessor::~OdHarmoNobAudioProcessor()
 {
     pfft = nullptr;
-    readonlySpectrumCopyBuffer = nullptr;
 }
 
 //==============================================================================
@@ -88,8 +87,7 @@ void OdHarmoNobAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     const int totalNumInputChannels = getTotalNumInputChannels();
     const int totalNumOutputChannels = getTotalNumOutputChannels();
     const int numberOfProcessChannels = jmin(totalNumInputChannels, totalNumOutputChannels);
-    pfft = new OdPfft::Pfft<float>(1024, 2, numberOfProcessChannels, spectrumCallback, samplesPerBlock);
-    readonlySpectrumCopyBuffer = new AudioBuffer<float>(numberOfProcessChannels, samplesPerBlock);
+    pfft = new OdPfft::Pfft<float>(spectrumCallback, numberOfProcessChannels, 1024, 2, samplesPerBlock);
 
 }
 
@@ -98,7 +96,6 @@ void OdHarmoNobAudioProcessor::releaseResources()
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
     pfft = nullptr;
-    readonlySpectrumCopyBuffer = nullptr;
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations

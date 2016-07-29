@@ -13,9 +13,13 @@
 
 using namespace OdPfft;
 
-template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels, frequencyDomainCallback callback)
+template <typename FloatType> Pfft<FloatType>::Pfft(frequencyDomainCallback callback, const int numChannels, const int size, const int hopFac, const int blockSize)
+    : Pfft(new defaultFrequencyDomainCallbackObject(callback), numChannels, size, hopFac, blockSize) {}
+
+
+template <typename FloatType> Pfft<FloatType>::Pfft(frequencyDomainCallbackObject* cbo, const int numChannels, const int size, const int hopFac, const int blockSize)
     : fftSize(size), overlapFactor(hopFac),
-    numberOfAudioChannels(numChannels), inputBlockSize(fftSize),
+    numberOfAudioChannels(numChannels), //inputBlockSize(blockSize),
     processBufferWriteIndex(0), processBufferTriggerIndex(0),
     frameBufferStartIndex(0),
     outputBufferWriteIndex(0), outputBufferSamplesReady(0),
@@ -34,17 +38,20 @@ template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int ho
     
     fftw = new OdFftwUtils::Od1dRealFftw<FloatType>(fftSize, numberOfAudioChannels);
     
-    spectrumCallbackObject = new defaultDomainCallbackObject(callback);
+    spectrumCallbackObject = cbo;
     
     setNumberOfChannels(numChannels);
 
+    setInputBlockSize(blockSize);
 }
 
-template <typename FloatType> Pfft<FloatType>::Pfft(const int size, const int hopFac, const int numChannels, frequencyDomainCallback callback, const int blockSize)
-    : Pfft(size, hopFac, numChannels, callback)
+/*
+template <typename FloatType> Pfft<FloatType>::Pfft(frequencyDomainCallback callback, const int size, const int hopFac, const int numChannels, const int blockSize)
+    : Pfft(callback, size, hopFac, numChannels)
 {
     setInputBlockSize(blockSize);
 }
+*/
 
 template <typename FloatType> Pfft<FloatType>::~Pfft()
 {

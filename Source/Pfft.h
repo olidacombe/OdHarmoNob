@@ -66,17 +66,19 @@ public:
             virtual void spectrumCallback(AudioBuffer<FloatType>&) = 0;
     };
     
-    class defaultDomainCallbackObject : public frequencyDomainCallbackObject
+    class defaultFrequencyDomainCallbackObject : public frequencyDomainCallbackObject
     {
         public:
-            defaultDomainCallbackObject(frequencyDomainCallback cb) : callback(cb) {};
+            defaultFrequencyDomainCallbackObject(frequencyDomainCallback cb) : callback(cb) {};
             void spectrumCallback(AudioBuffer<FloatType>& buf) override {};
         private:
             frequencyDomainCallback callback;
     };
     
-    Pfft(const int size=1024, const int hopFac=4, const int numChannels=1, frequencyDomainCallback callback = &defaultSpectrumCallback);
-    Pfft(const int size, const int hopFac, const int numChannels, frequencyDomainCallback callback, const int blockSize);
+    //Pfft(frequencyDomainCallbackObject callbackObject, const int numChannels=1, const int size=1024, const int hopFac=4);
+    Pfft(frequencyDomainCallbackObject* callbackObject, const int numChannels=1, const int size=1006, const int hopFac=4, const int blockSize=512);
+    Pfft(frequencyDomainCallback cb, const int numChannels=1, const int size=1024, const int hopFac=4, const int blockSize=512);
+    //Pfft(frequencyDomainCallback cb, const int numChannels, const int size, const int hopFac, const int blockSize);
     virtual ~Pfft();
     void setNumberOfChannels(const int numberOfChannels);
     void setInputBlockSize(const int blockSize);
@@ -95,7 +97,8 @@ private:
     FloatType calculateWindowMergeGain();
 
     //frequencyDomainCallback spectrumCallback;
-    ScopedPointer<frequencyDomainCallbackObject> spectrumCallbackObject;
+    //ScopedPointer<frequencyDomainCallbackObject> spectrumCallbackObject;
+    frequencyDomainCallbackObject *spectrumCallbackObject;
     
     ScopedPointer<OdFftwUtils::Od1dRealFftw<FloatType>> fftw;
     ScopedPointer<PfftWindow<FloatType>> window; // our "window function" buffer to multiply frames by in and out

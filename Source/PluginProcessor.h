@@ -72,7 +72,6 @@ private:
 */
     //ScopedPointer<FFT> FFTs[numFFTs];
     ScopedPointer<OdPfft::Pfft<float>> pfft;
-    ScopedPointer<AudioBuffer<float>> readonlySpectrumCopyBuffer;
     
     //OwnedArray<Pfft> pffts;
     //==============================================================================
