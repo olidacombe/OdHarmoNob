@@ -15,6 +15,20 @@
 #include "Pfft.h"
 
 
+class freqMultiplySpectrumCBO : public OdPfft::Pfft<float>::frequencyDomainCallbackObject
+{
+public:
+    ~freqMultiplySpectrumCBO() override
+    {
+        //roBuf.clear();
+    }
+    void spectrumCallback(AudioBuffer<float>& buf) override;
+private:
+    AudioBuffer<float> roBuf;
+    
+};
+
+
 //==============================================================================
 /**
 */
@@ -72,6 +86,7 @@ private:
 */
     //ScopedPointer<FFT> FFTs[numFFTs];
     ScopedPointer<OdPfft::Pfft<float>> pfft;
+    ScopedPointer<freqMultiplySpectrumCBO> spectrumCallbackObject;
     
     //OwnedArray<Pfft> pffts;
     //==============================================================================

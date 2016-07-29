@@ -11,21 +11,29 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-
-void spectrumCallback(AudioBuffer<float>& spectrum) {
-
+// this function seems impotent - although it is surely getting called
+// hmmmmmm....
+void freqMultiplySpectrumCBO::spectrumCallback(AudioBuffer<float>& buf)
+{
+    buf.clear();
+    
+    roBuf = buf;
+    const AudioBuffer<float>& originalSpectrum = roBuf;
+        
+    buf.clear();
 }
 
 
 //==============================================================================
 OdHarmoNobAudioProcessor::OdHarmoNobAudioProcessor()
 {
-
+    spectrumCallbackObject = new freqMultiplySpectrumCBO();
 }
 
 OdHarmoNobAudioProcessor::~OdHarmoNobAudioProcessor()
 {
     pfft = nullptr;
+    spectrumCallbackObject = nullptr;
 }
 
 //==============================================================================
@@ -87,7 +95,7 @@ void OdHarmoNobAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     const int totalNumInputChannels = getTotalNumInputChannels();
     const int totalNumOutputChannels = getTotalNumOutputChannels();
     const int numberOfProcessChannels = jmin(totalNumInputChannels, totalNumOutputChannels);
-    pfft = new OdPfft::Pfft<float>(spectrumCallback, numberOfProcessChannels, 1024, 2, samplesPerBlock);
+    pfft = new OdPfft::Pfft<float>(spectrumCallbackObject, numberOfProcessChannels, 1024, 2, samplesPerBlock);
 
 }
 
