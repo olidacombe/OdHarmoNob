@@ -15,19 +15,24 @@
 // hmmmmmm....
 void freqMultiplySpectrumCBO::spectrumCallback(AudioBuffer<float>& buf)
 {
-    buf.clear();
-    
     roBuf = buf;
-    const AudioBuffer<float>& originalSpectrum = roBuf;
-        
-    buf.clear();
+    float **wps = buf.getArrayOfWritePointers();
+    const float **rps = roBuf.getArrayOfReadPointers();
+    
+    const int m=size/2;
+    for(int c=0; c<numChannels; c++) {
+        for(int b=0; b<m; b++) {
+            wps[c][b]=rps[c][static_cast<int>(b*factor) % m];
+        }
+    }
 }
+
 
 
 //==============================================================================
 OdHarmoNobAudioProcessor::OdHarmoNobAudioProcessor()
 {
-    spectrumCallbackObject = new freqMultiplySpectrumCBO();
+    //spectrumCallbackObject = new freqMultiplySpectrumCBO();
 }
 
 OdHarmoNobAudioProcessor::~OdHarmoNobAudioProcessor()
@@ -92,10 +97,13 @@ void OdHarmoNobAudioProcessor::changeProgramName (int index, const String& newNa
 //==============================================================================
 void OdHarmoNobAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {   
+    const int fftSize = 1024;
     const int totalNumInputChannels = getTotalNumInputChannels();
     const int totalNumOutputChannels = getTotalNumOutputChannels();
     const int numberOfProcessChannels = jmin(totalNumInputChannels, totalNumOutputChannels);
-    pfft = new OdPfft::Pfft<float>(spectrumCallbackObject, numberOfProcessChannels, 1024, 2, samplesPerBlock);
+    spectrumCallbackObject = new freqMultiplySpectrumCBO(fftSize, numberOfProcessChannels);
+    spectrumCallbackObject->setFactor(0.5);
+    pfft = new OdPfft::Pfft<float>(spectrumCallbackObject, numberOfProcessChannels, fftSize, 2, samplesPerBlock);
 
 }
 

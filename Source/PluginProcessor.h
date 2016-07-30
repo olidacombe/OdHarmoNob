@@ -18,12 +18,17 @@
 class freqMultiplySpectrumCBO : public OdPfft::Pfft<float>::frequencyDomainCallbackObject
 {
 public:
+    freqMultiplySpectrumCBO(int s, int c) : size(s), numChannels(c), factor(1.0) {}
     ~freqMultiplySpectrumCBO() override
     {
         //roBuf.clear();
     }
+    void setFactor(float f) { factor = f; };
     void spectrumCallback(AudioBuffer<float>& buf) override;
 private:
+    int size;
+    int numChannels;
+    float factor;
     AudioBuffer<float> roBuf;
     
 };
