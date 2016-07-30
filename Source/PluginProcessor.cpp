@@ -22,9 +22,10 @@ void freqMultiplySpectrumCBO::spectrumCallback(AudioBuffer<float>& buf)
     const int m=size/2;
     for(int c=0; c<numChannels; c++) {
         for(int b=0; b<m; b++) {
-            wps[c][b]=rps[c][static_cast<int>(b*factor) % m];
+            wps[c][b]=rps[c][static_cast<int>(b/factor) % m];
         }
     }
+    //buf=roBuf;
 }
 
 
@@ -102,7 +103,7 @@ void OdHarmoNobAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     const int totalNumOutputChannels = getTotalNumOutputChannels();
     const int numberOfProcessChannels = jmin(totalNumInputChannels, totalNumOutputChannels);
     spectrumCallbackObject = new freqMultiplySpectrumCBO(fftSize, numberOfProcessChannels);
-    spectrumCallbackObject->setFactor(0.5);
+    spectrumCallbackObject->setFactor(0.2);
     pfft = new OdPfft::Pfft<float>(spectrumCallbackObject, numberOfProcessChannels, fftSize, 2, samplesPerBlock);
 
 }

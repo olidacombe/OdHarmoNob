@@ -31,10 +31,14 @@ template <typename FloatType> Pfft<FloatType>::Pfft(frequencyDomainCallbackObjec
     
     const int fftOrder = log2(fftSize);
     hopSize = fftSize/overlapFactor; // both powers of 2, and fftSize > ovelapFactor
+    std::cout << "hopsize: ";
+    std::cout << hopSize << std::endl;
 
     //window = new LinearWindow<FloatType>(fftSize);
     window = new WelchWindow<FloatType>(fftSize);
     windowMergeGain = calculateWindowMergeGain();
+    std::cout << "windowMergeGain: ";
+    std::cout << windowMergeGain << std::endl;
     
     fftw = new OdFftwUtils::Od1dRealFftw<FloatType>(fftSize, numberOfAudioChannels);
     
@@ -74,7 +78,7 @@ template <typename T> void Pfft<T>::setInputBlockSize(const int blockSize)
 
     // I didn't properly figure this out, but this is based on intuition and seems to work.
     // Would prefer really to sort it out properly.
-    outputBufferSize = jmax( boost::math::lcm(blockSize, hopSize), fftSize) + hopSize;
+    outputBufferSize = 2*jmax( boost::math::lcm(blockSize, hopSize), fftSize);
     // The added hopSize is to prevent the "pure overwrite" from wrapping over past readIndex
 
     std::cout << "outputBufferSize: "; std::cout << outputBufferSize << std::endl;
@@ -83,7 +87,7 @@ template <typename T> void Pfft<T>::setInputBlockSize(const int blockSize)
 
 template <typename T> T Pfft<T>::calculateWindowMergeGain()
 {
-    AudioBuffer<T> calcBuffer(1, fftSize + hopSize);
+    AudioBuffer<T> calcBuffer(1, 2*fftSize - hopSize);
     AudioBuffer<T> winBuffer(1, fftSize);
     calcBuffer.clear();
     for(int i=0; i<fftSize; i++) {
@@ -103,7 +107,7 @@ template <typename T> T Pfft<T>::calculateWindowMergeGain()
     return 1.0/magnitude;
 }
 
-template <typename T> void Pfft<T>::initializeOutputBuffer()
+template <typename T> void Pfft<T>::initializeOutputBuffer() // getting called twice in constuctor :(
 {
     outputBuffer = new AudioBuffer<T>(numberOfAudioChannels, outputBufferSize);
     outputBuffer->clear();
@@ -165,6 +169,8 @@ template <typename FloatType> void Pfft<FloatType>::processBlock(AudioBuffer<Flo
         PfftBufferUtils::ringBufferCopy(buffer, 0, *outputBuffer, outputBufferReadIndex, bufferSize);
         outputBufferReadIndex = (outputBufferReadIndex + bufferSize) % outputBufferSize;
         outputBufferSamplesReady -= bufferSize;
+        
+        //std::cout << outputBuffer->getMagnitude(0, outputBufferSize) << std::endl;
     } else { // clear buffer
         std::cout << "insufficient output samples" << std::endl;
         buffer.clear();
@@ -185,8 +191,10 @@ template <typename FloatType> void Pfft<FloatType>::processFrame(AudioBuffer<Flo
     
     // then inverse
     fftw->inverseTransform();
+
     // then scale down by factor of fftSize - as the DFT is unnormalized
     frame.applyGain(static_cast<FloatType>(1)/fftSize);
+
     // then window again
     window->applyTo(frame);
     
